@@ -57,8 +57,12 @@ class CVApp {
         document.getElementById('loadBtn').addEventListener('click', () => this.loadFromStorage());
 
         // Zoom controls
-        document.getElementById('zoomIn').addEventListener('click', () => this.zoomPreview(1.1));
-        document.getElementById('zoomOut').addEventListener('click', () => this.zoomPreview(0.9));
+        document.querySelectorAll('#zoomIn').forEach(btn => {
+            btn.addEventListener('click', () => this.zoomPreview(1.1));
+        });
+        document.querySelectorAll('#zoomOut').forEach(btn => {
+            btn.addEventListener('click', () => this.zoomPreview(0.9));
+        });
 
         // CV Analysis
         document.getElementById('cvFile').addEventListener('change', (e) => this.handleFileUpload(e));
@@ -90,14 +94,14 @@ class CVApp {
         const analyzeBtn = document.getElementById('analyzeBtn');
         analyzeBtn.disabled = false;
 
-        // Show file info with enhanced styling
+        // Show file info with clean styling
         const fileName = file.name;
         const fileSize = (file.size / 1024).toFixed(2);
         const fileInfo = document.createElement('div');
-        fileInfo.className = 'mt-4 p-4 bg-gradient-to-r from-green-50 to-green-100 border-2 border-green-200 rounded-xl animate-slide-up';
+        fileInfo.className = 'mt-4 p-4 bg-green-50 border border-green-200 rounded-xl animate-slide-up';
         fileInfo.innerHTML = `
             <div class="flex items-center">
-                <div class="w-12 h-12 bg-gradient-to-r from-green-500 to-green-600 rounded-xl flex items-center justify-center mr-4">
+                <div class="w-12 h-12 bg-green-500 rounded-xl flex items-center justify-center mr-4">
                     <i class="fas fa-file-alt text-white"></i>
                 </div>
                 <div>
@@ -131,10 +135,10 @@ class CVApp {
                 previewContent = `📄 ${file.name}\n📊 Type: ${file.type}\n📏 Taille: ${(file.size / 1024).toFixed(2)} KB\n\n✨ Fichier prêt pour l'analyse IA`;
             }
 
-            // Update preview with enhanced styling
+            // Update preview with clean styling
             document.getElementById('analyzedCvPreview').innerHTML = `
-                <div class="p-8 text-sm text-gray-700 whitespace-pre-wrap max-h-96 overflow-y-auto bg-gradient-to-br from-blue-50 to-blue-100 rounded-xl">
-                    <div class="mb-4 p-4 bg-white/70 rounded-lg">
+                <div class="p-8 text-sm text-gray-700 whitespace-pre-wrap max-h-96 overflow-y-auto bg-blue-50 rounded-xl">
+                    <div class="mb-4 p-4 bg-white rounded-lg shadow-sm">
                         <h4 class="font-bold text-blue-900 mb-2 flex items-center">
                             <i class="fas fa-file-alt mr-2"></i>
                             Aperçu du fichier
@@ -164,7 +168,7 @@ class CVApp {
             return;
         }
 
-        // Show loading state with enhanced animation
+        // Show loading state
         analyzeBtn.disabled = true;
         spinner.classList.remove('hidden');
         btnText.textContent = 'Analyse IA en cours...';
@@ -204,7 +208,7 @@ class CVApp {
         resultsSection.classList.remove('hidden');
         resultsSection.classList.add('animate-slide-up');
 
-        // Animate score with enhanced visual feedback
+        // Animate score
         const targetScore = results.overallScore;
         const circumference = 2 * Math.PI * 70; // radius = 70
         const offset = circumference - (targetScore / 100) * circumference;
@@ -218,9 +222,9 @@ class CVApp {
         scoreDescription.textContent = this.getScoreDescription(targetScore);
         scoreDescription.className = `mt-2 text-lg font-medium ${this.getScoreTextColor(targetScore)}`;
 
-        // Enhanced analysis details
+        // Clean analysis details
         analysisDetails.innerHTML = results.details.map(detail => `
-            <div class="analysis-item bg-gradient-to-r ${this.getScoreGradient(detail.score)} rounded-2xl p-6 border-l-4 ${this.getScoreColor(detail.score, 'border')} card-hover">
+            <div class="analysis-item bg-gray-50 rounded-xl p-6 border-l-4 ${this.getScoreColor(detail.score, 'border')} card-hover">
                 <div class="flex justify-between items-start mb-4">
                     <h5 class="text-xl font-bold text-gray-900 flex items-center">
                         <i class="${this.getCategoryIcon(detail.category)} mr-3 ${this.getScoreColor(detail.score, 'text')}"></i>
@@ -261,9 +265,9 @@ class CVApp {
             </div>
         `).join('');
 
-        // Enhanced recommendations with priority styling
+        // Clean recommendations
         recommendations.innerHTML = results.recommendations.map(rec => `
-            <div class="flex items-start space-x-4 p-6 ${this.getPriorityBg(rec.priority)} rounded-2xl border-l-4 ${this.getPriorityBorder(rec.priority)} card-hover">
+            <div class="flex items-start space-x-4 p-6 ${this.getPriorityBg(rec.priority)} rounded-xl border-l-4 ${this.getPriorityBorder(rec.priority)} card-hover">
                 <div class="w-12 h-12 ${this.getPriorityIconBg(rec.priority)} rounded-xl flex items-center justify-center flex-shrink-0">
                     <i class="${this.getPriorityIcon(rec.priority)} text-white"></i>
                 </div>
@@ -308,12 +312,6 @@ class CVApp {
         return icons[category] || 'fas fa-info-circle';
     }
 
-    getScoreGradient(score) {
-        if (score >= 80) return 'from-green-50 to-green-100';
-        if (score >= 60) return 'from-yellow-50 to-yellow-100';
-        return 'from-red-50 to-red-100';
-    }
-
     getScoreColor(score, type) {
         const colors = {
             high: { border: 'border-green-500', text: 'text-green-600', bg: 'bg-green-500' },
@@ -335,9 +333,9 @@ class CVApp {
 
     getPriorityBg(priority) {
         const backgrounds = {
-            high: 'bg-gradient-to-r from-red-50 to-red-100',
-            medium: 'bg-gradient-to-r from-yellow-50 to-yellow-100',
-            low: 'bg-gradient-to-r from-blue-50 to-blue-100'
+            high: 'bg-red-50',
+            medium: 'bg-yellow-50',
+            low: 'bg-blue-50'
         };
         return backgrounds[priority] || backgrounds.medium;
     }
@@ -353,9 +351,9 @@ class CVApp {
 
     getPriorityIconBg(priority) {
         const backgrounds = {
-            high: 'bg-gradient-to-r from-red-500 to-red-600',
-            medium: 'bg-gradient-to-r from-yellow-500 to-yellow-600',
-            low: 'bg-gradient-to-r from-blue-500 to-blue-600'
+            high: 'bg-red-500',
+            medium: 'bg-yellow-500',
+            low: 'bg-blue-500'
         };
         return backgrounds[priority] || backgrounds.medium;
     }
@@ -444,7 +442,7 @@ class CVApp {
         // Show target step
         document.getElementById(`step${step}`).classList.remove('hidden');
 
-        // Update step indicators with enhanced styling
+        // Update step indicators
         document.querySelectorAll('.step-indicator').forEach((indicator, index) => {
             const stepNum = index + 1;
             const circle = indicator.querySelector('div');
@@ -452,12 +450,12 @@ class CVApp {
 
             if (stepNum <= step) {
                 circle.classList.remove('bg-gray-400');
-                circle.classList.add('bg-gradient-to-r', 'from-primary-500', 'to-primary-600', 'shadow-lg');
+                circle.classList.add('bg-blue-600', 'shadow-lg');
                 text.classList.remove('text-gray-300');
                 text.classList.add('text-white');
                 indicator.classList.add('active');
             } else {
-                circle.classList.remove('bg-gradient-to-r', 'from-primary-500', 'to-primary-600', 'shadow-lg');
+                circle.classList.remove('bg-blue-600', 'shadow-lg');
                 circle.classList.add('bg-gray-400');
                 text.classList.remove('text-white');
                 text.classList.add('text-gray-300');
@@ -506,15 +504,15 @@ class CVApp {
     selectTemplate(template) {
         this.selectedTemplate = template;
         
-        // Update visual selection with enhanced styling
+        // Update visual selection
         document.querySelectorAll('.template-option').forEach(option => {
-            option.classList.remove('border-primary-500', 'bg-primary-50', 'shadow-xl', 'scale-105');
+            option.classList.remove('border-blue-500', 'bg-blue-50', 'shadow-xl', 'scale-105');
             option.classList.add('border-gray-200');
         });
 
         const selectedOption = document.querySelector(`[data-template="${template}"]`);
         selectedOption.classList.remove('border-gray-200');
-        selectedOption.classList.add('border-primary-500', 'bg-primary-50', 'shadow-xl', 'scale-105');
+        selectedOption.classList.add('border-blue-500', 'bg-blue-50', 'shadow-xl', 'scale-105');
 
         this.updatePreview();
     }
@@ -524,10 +522,10 @@ class CVApp {
         const index = container.children.length;
         
         const experienceHTML = `
-            <div class="experience-item bg-gradient-to-r from-blue-50 to-blue-100 border-2 border-blue-200 rounded-2xl p-6 card-hover animate-slide-up">
+            <div class="experience-item bg-blue-50 border border-blue-200 rounded-xl p-6 card-hover animate-slide-up">
                 <div class="flex justify-between items-start mb-6">
                     <h4 class="text-xl font-bold text-gray-900 flex items-center">
-                        <i class="fas fa-briefcase mr-3 text-primary-500"></i>
+                        <i class="fas fa-briefcase mr-3 text-blue-500"></i>
                         Expérience ${index + 1}
                     </h4>
                     <button class="remove-experience w-10 h-10 bg-red-500 hover:bg-red-600 text-white rounded-xl transition-all duration-300 flex items-center justify-center shadow-lg hover:shadow-xl">
@@ -537,26 +535,26 @@ class CVApp {
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
                     <div class="form-group">
                         <label class="block text-sm font-semibold text-gray-700 mb-2">Poste</label>
-                        <input type="text" class="exp-position w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-200 transition-all duration-300">
+                        <input type="text" class="exp-position w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all duration-300">
                     </div>
                     <div class="form-group">
                         <label class="block text-sm font-semibold text-gray-700 mb-2">Entreprise</label>
-                        <input type="text" class="exp-company w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-200 transition-all duration-300">
+                        <input type="text" class="exp-company w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all duration-300">
                     </div>
                 </div>
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
                     <div class="form-group">
                         <label class="block text-sm font-semibold text-gray-700 mb-2">Date de début</label>
-                        <input type="text" class="exp-start-date w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-200 transition-all duration-300" placeholder="MM/YYYY">
+                        <input type="text" class="exp-start-date w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all duration-300" placeholder="MM/YYYY">
                     </div>
                     <div class="form-group">
                         <label class="block text-sm font-semibold text-gray-700 mb-2">Date de fin</label>
-                        <input type="text" class="exp-end-date w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-200 transition-all duration-300" placeholder="MM/YYYY ou Présent">
+                        <input type="text" class="exp-end-date w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all duration-300" placeholder="MM/YYYY ou Présent">
                     </div>
                 </div>
                 <div class="form-group">
                     <label class="block text-sm font-semibold text-gray-700 mb-2">Description</label>
-                    <textarea class="exp-description w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-200 transition-all duration-300 resize-none" rows="4" placeholder="Décrivez vos responsabilités et réalisations avec des chiffres..."></textarea>
+                    <textarea class="exp-description w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all duration-300 resize-none" rows="4" placeholder="Décrivez vos responsabilités et réalisations avec des chiffres..."></textarea>
                 </div>
             </div>
         `;
@@ -585,10 +583,10 @@ class CVApp {
         const index = container.children.length;
         
         const educationHTML = `
-            <div class="education-item bg-gradient-to-r from-green-50 to-green-100 border-2 border-green-200 rounded-2xl p-6 card-hover animate-slide-up">
+            <div class="education-item bg-green-50 border border-green-200 rounded-xl p-6 card-hover animate-slide-up">
                 <div class="flex justify-between items-start mb-6">
                     <h4 class="text-xl font-bold text-gray-900 flex items-center">
-                        <i class="fas fa-graduation-cap mr-3 text-secondary-500"></i>
+                        <i class="fas fa-graduation-cap mr-3 text-green-500"></i>
                         Formation ${index + 1}
                     </h4>
                     <button class="remove-education w-10 h-10 bg-red-500 hover:bg-red-600 text-white rounded-xl transition-all duration-300 flex items-center justify-center shadow-lg hover:shadow-xl">
@@ -598,21 +596,21 @@ class CVApp {
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
                     <div class="form-group">
                         <label class="block text-sm font-semibold text-gray-700 mb-2">Diplôme</label>
-                        <input type="text" class="edu-degree w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-secondary-500 focus:ring-2 focus:ring-secondary-200 transition-all duration-300">
+                        <input type="text" class="edu-degree w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-green-500 focus:ring-2 focus:ring-green-200 transition-all duration-300">
                     </div>
                     <div class="form-group">
                         <label class="block text-sm font-semibold text-gray-700 mb-2">Établissement</label>
-                        <input type="text" class="edu-institution w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-secondary-500 focus:ring-2 focus:ring-secondary-200 transition-all duration-300">
+                        <input type="text" class="edu-institution w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-green-500 focus:ring-2 focus:ring-green-200 transition-all duration-300">
                     </div>
                 </div>
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div class="form-group">
                         <label class="block text-sm font-semibold text-gray-700 mb-2">Année</label>
-                        <input type="text" class="edu-year w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-secondary-500 focus:ring-2 focus:ring-secondary-200 transition-all duration-300" placeholder="YYYY">
+                        <input type="text" class="edu-year w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-green-500 focus:ring-2 focus:ring-green-200 transition-all duration-300" placeholder="YYYY">
                     </div>
                     <div class="form-group">
                         <label class="block text-sm font-semibold text-gray-700 mb-2">Lieu</label>
-                        <input type="text" class="edu-location w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-secondary-500 focus:ring-2 focus:ring-secondary-200 transition-all duration-300">
+                        <input type="text" class="edu-location w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-green-500 focus:ring-2 focus:ring-green-200 transition-all duration-300">
                     </div>
                 </div>
             </div>
@@ -862,12 +860,12 @@ class CVApp {
     showNotification(message, type) {
         const notification = document.createElement('div');
         const colors = {
-            error: 'bg-gradient-to-r from-red-500 to-red-600 border-red-400',
-            success: 'bg-gradient-to-r from-green-500 to-green-600 border-green-400',
-            info: 'bg-gradient-to-r from-blue-500 to-blue-600 border-blue-400'
+            error: 'bg-red-500 border-red-400',
+            success: 'bg-green-500 border-green-400',
+            info: 'bg-blue-500 border-blue-400'
         };
         
-        notification.className = `fixed top-6 right-6 ${colors[type]} text-white px-6 py-4 rounded-2xl shadow-2xl z-50 border-2 animate-slide-up max-w-md`;
+        notification.className = `fixed top-6 right-6 ${colors[type]} text-white px-6 py-4 rounded-xl shadow-2xl z-50 border animate-slide-up max-w-md`;
         notification.innerHTML = `
             <div class="flex items-center">
                 <div class="mr-3">
@@ -901,7 +899,7 @@ class CVApp {
                 <i class="fas fa-robot mr-3 text-purple-500"></i>
                 Compatibilité ATS
             </h4>
-            <div class="bg-gradient-to-r from-purple-50 to-purple-100 rounded-2xl p-6 border-l-4 border-purple-500 card-hover">
+            <div class="bg-purple-50 rounded-xl p-6 border-l-4 border-purple-500 card-hover">
                 <div class="flex justify-between items-center mb-4">
                     <h5 class="text-lg font-semibold text-purple-900">Score de compatibilité</h5>
                     <div class="text-right">
@@ -953,7 +951,7 @@ class CVApp {
                 <i class="fas fa-tags mr-3 text-blue-500"></i>
                 Analyse des mots-clés
             </h4>
-            <div class="bg-gradient-to-r from-blue-50 to-blue-100 rounded-2xl p-6 border-l-4 border-blue-500 card-hover">
+            <div class="bg-blue-50 rounded-xl p-6 border-l-4 border-blue-500 card-hover">
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div>
                         <h6 class="font-semibold text-blue-800 mb-3 flex items-center">
