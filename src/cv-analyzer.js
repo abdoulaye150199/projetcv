@@ -3,34 +3,49 @@ import { AIService } from './ai-service.js';
 export class CVAnalyzer {
     constructor() {
         this.aiService = new AIService();
-        this.atsKeywords = [
-            'experience', 'compétences', 'formation', 'diplôme', 'certification',
-            'projet', 'réalisation', 'responsabilité', 'management', 'équipe',
-            'résultat', 'objectif', 'amélioration', 'développement', 'innovation'
+        
+        // Mots-clés professionnels français
+        this.professionalKeywords = [
+            'gestion', 'management', 'équipe', 'projet', 'développement', 'amélioration',
+            'optimisation', 'analyse', 'stratégie', 'innovation', 'collaboration',
+            'leadership', 'communication', 'organisation', 'planification', 'coordination',
+            'supervision', 'encadrement', 'formation', 'conseil', 'expertise'
         ];
         
+        // Mots-clés techniques modernes
         this.technicalKeywords = [
-            'javascript', 'python', 'java', 'react', 'angular', 'vue', 'node',
-            'sql', 'mongodb', 'aws', 'docker', 'kubernetes', 'git', 'agile',
-            'scrum', 'devops', 'ci/cd', 'api', 'rest', 'graphql'
+            'javascript', 'typescript', 'python', 'java', 'react', 'angular', 'vue',
+            'node.js', 'express', 'sql', 'mongodb', 'postgresql', 'mysql', 'redis',
+            'aws', 'azure', 'gcp', 'docker', 'kubernetes', 'git', 'gitlab', 'github',
+            'agile', 'scrum', 'devops', 'ci/cd', 'jenkins', 'api', 'rest', 'graphql',
+            'microservices', 'cloud', 'serverless', 'terraform', 'ansible'
         ];
+
+        // Secteurs d'activité
+        this.sectorKeywords = {
+            'tech': ['développement', 'programmation', 'software', 'digital', 'it', 'informatique'],
+            'marketing': ['marketing', 'communication', 'digital', 'seo', 'sem', 'social media'],
+            'finance': ['finance', 'comptabilité', 'audit', 'contrôle de gestion', 'budget'],
+            'rh': ['ressources humaines', 'recrutement', 'formation', 'paie', 'social'],
+            'commercial': ['vente', 'commercial', 'business development', 'négociation', 'client']
+        };
     }
 
     async analyzeCV(file, jobDescription = '') {
         try {
+            console.log('🔍 Début de l\'analyse du CV...');
             const cvText = await this.extractTextFromFile(file);
+            console.log('📄 Texte extrait du CV:', cvText.substring(0, 200) + '...');
             
-            // Utiliser l'IA pour l'analyse si possible, sinon fallback sur l'analyse locale
-            try {
-                const aiAnalysis = await this.aiService.analyzeCV(cvText, jobDescription);
-                return this.enhanceAnalysisWithLocalData(aiAnalysis, cvText, jobDescription);
-            } catch (aiError) {
-                console.warn('Analyse IA échouée, utilisation de l\'analyse locale:', aiError);
-                return this.performLocalAnalysis(cvText, jobDescription);
-            }
+            // Utiliser l'IA améliorée pour l'analyse
+            const analysis = await this.aiService.analyzeCV(cvText, jobDescription);
+            
+            // Enrichir avec des données locales spécifiques
+            return this.enrichAnalysisWithLocalInsights(analysis, cvText, jobDescription, file);
+            
         } catch (error) {
-            console.error('Erreur lors de l\'analyse:', error);
-            throw error;
+            console.error('❌ Erreur lors de l\'analyse:', error);
+            throw new Error(`Erreur lors de l'analyse du CV: ${error.message}`);
         }
     }
 
@@ -39,366 +54,460 @@ export class CVAnalyzer {
             const reader = new FileReader();
             
             reader.onload = (e) => {
-                let text = '';
-                
-                if (file.type === 'text/plain') {
-                    text = e.target.result;
-                } else if (file.type === 'application/pdf') {
-                    // Pour une vraie application, utiliser une bibliothèque comme PDF.js
-                    text = 'Contenu PDF simulé pour la démonstration - ' + file.name;
-                } else {
-                    // Simulation pour les autres types de fichiers
-                    text = 'Contenu de fichier simulé pour la démonstration - ' + file.name;
+                try {
+                    let text = '';
+                    
+                    if (file.type === 'text/plain') {
+                        text = e.target.result;
+                    } else if (file.type === 'application/pdf') {
+                        // Simulation d'extraction PDF - dans un vrai projet, utiliser PDF.js
+                        text = `CV PDF de ${file.name}. 
+                        
+                        PROFIL PROFESSIONNEL
+                        Développeur Full Stack avec 5 ans d'expérience dans le développement d'applications web modernes. 
+                        Spécialisé en JavaScript, React, Node.js et bases de données SQL/NoSQL.
+                        
+                        EXPÉRIENCE PROFESSIONNELLE
+                        
+                        Développeur Senior - TechCorp (2021-2024)
+                        • Développement d'applications React avec TypeScript
+                        • Gestion d'équipe de 3 développeurs junior
+                        • Amélioration des performances de 40%
+                        • Migration vers architecture microservices
+                        
+                        Développeur Full Stack - StartupXYZ (2019-2021)
+                        • Création d'API REST avec Node.js et Express
+                        • Intégration de bases de données MongoDB
+                        • Développement frontend avec React et Redux
+                        • Mise en place de tests automatisés
+                        
+                        FORMATION
+                        Master Informatique - Université Paris Diderot (2019)
+                        Licence Informatique - Université Paris Diderot (2017)
+                        
+                        COMPÉTENCES TECHNIQUES
+                        • Langages: JavaScript, TypeScript, Python, Java
+                        • Frontend: React, Angular, Vue.js, HTML5, CSS3
+                        • Backend: Node.js, Express, Django, Spring Boot
+                        • Bases de données: MongoDB, PostgreSQL, MySQL, Redis
+                        • Cloud: AWS, Docker, Kubernetes
+                        • Outils: Git, Jenkins, Jira, Confluence
+                        
+                        COMPÉTENCES INTERPERSONNELLES
+                        • Leadership et management d'équipe
+                        • Communication et présentation
+                        • Résolution de problèmes complexes
+                        • Adaptabilité et apprentissage continu
+                        
+                        LANGUES
+                        • Français (natif)
+                        • Anglais (courant - TOEIC 850)
+                        • Espagnol (intermédiaire)
+                        
+                        CONTACT
+                        Email: john.doe@email.com
+                        Téléphone: +33 6 12 34 56 78
+                        LinkedIn: linkedin.com/in/johndoe
+                        Adresse: Paris, France`;
+                    } else if (file.type.includes('word') || file.name.endsWith('.docx') || file.name.endsWith('.doc')) {
+                        // Simulation d'extraction Word
+                        text = `CV Word de ${file.name}.
+                        
+                        Marie Dupont
+                        Chef de Projet Marketing Digital
+                        
+                        CONTACT
+                        Email: marie.dupont@email.com
+                        Téléphone: 01 23 45 67 89
+                        LinkedIn: linkedin.com/in/mariedupont
+                        Adresse: Lyon, France
+                        
+                        PROFIL PROFESSIONNEL
+                        Chef de projet marketing digital avec 7 ans d'expérience dans la gestion de campagnes multi-canaux. 
+                        Expertise en SEO/SEA, social media marketing et analyse de performance. 
+                        Passionnée par l'innovation digitale et la transformation des entreprises.
+                        
+                        EXPÉRIENCE PROFESSIONNELLE
+                        
+                        Chef de Projet Marketing Digital - AgenceWeb (2020-2024)
+                        • Gestion de portefeuille clients (15 comptes, CA 2M€)
+                        • Augmentation du trafic organique de 150% en moyenne
+                        • Management d'équipe de 5 personnes
+                        • Mise en place de stratégies omnicanales
+                        • ROI moyen des campagnes: +85%
+                        
+                        Responsable Marketing Digital - E-commerce Plus (2018-2020)
+                        • Développement de la stratégie digitale
+                        • Gestion budget marketing 500k€/an
+                        • Croissance du CA en ligne de 200%
+                        • Optimisation du tunnel de conversion (+45%)
+                        
+                        Chargée de Marketing Digital - StartupMode (2017-2018)
+                        • Création et gestion des campagnes Google Ads
+                        • Community management (Instagram, Facebook)
+                        • Analyse des performances et reporting
+                        • Collaboration avec les équipes créatives
+                        
+                        FORMATION
+                        Master Marketing Digital - ESCP Business School (2017)
+                        Licence Communication - Université Lyon 2 (2015)
+                        
+                        CERTIFICATIONS
+                        • Google Ads (Search, Display, Shopping)
+                        • Google Analytics 4
+                        • Facebook Blueprint
+                        • HubSpot Content Marketing
+                        
+                        COMPÉTENCES TECHNIQUES
+                        • SEO/SEA: Google Ads, Bing Ads, SEMrush, Ahrefs
+                        • Analytics: Google Analytics, Adobe Analytics, Hotjar
+                        • Social Media: Facebook Ads, Instagram, LinkedIn Ads
+                        • Email Marketing: Mailchimp, Sendinblue, Klaviyo
+                        • CMS: WordPress, Shopify, Magento
+                        • Design: Photoshop, Canva, Figma (bases)
+                        
+                        COMPÉTENCES INTERPERSONNELLES
+                        • Leadership et management d'équipe
+                        • Négociation et relation client
+                        • Créativité et innovation
+                        • Analyse et esprit critique
+                        • Gestion de projet et organisation
+                        
+                        LANGUES
+                        • Français (natif)
+                        • Anglais (courant - Cambridge C1)
+                        • Italien (intermédiaire)`;
+                    } else {
+                        // Fallback pour autres types de fichiers
+                        text = `Contenu simulé pour ${file.name}. 
+                        
+                        CV de candidat avec expérience professionnelle variée.
+                        Compétences en gestion de projet, communication et leadership.
+                        Formation supérieure et certifications professionnelles.
+                        Maîtrise de plusieurs langues et outils informatiques.
+                        Expérience en management d'équipe et développement commercial.`;
+                    }
+                    
+                    resolve(text);
+                } catch (error) {
+                    reject(new Error(`Erreur lors de l'extraction du texte: ${error.message}`));
                 }
-                
-                resolve(text.toLowerCase());
             };
             
             reader.onerror = () => reject(new Error('Erreur lors de la lecture du fichier'));
             
             if (file.type === 'text/plain') {
-                reader.readAsText(file);
+                reader.readAsText(file, 'UTF-8');
             } else {
                 reader.readAsArrayBuffer(file);
             }
         });
     }
 
-    enhanceAnalysisWithLocalData(aiAnalysis, cvText, jobDescription) {
-        // Enrichir l'analyse IA avec des données locales
-        const localAnalysis = this.performLocalAnalysis(cvText, jobDescription);
-        
-        // Combiner les résultats
-        return {
-            ...aiAnalysis,
-            localInsights: {
-                wordCount: cvText.split(/\s+/).length,
-                keywordDensity: this.calculateKeywordDensity(cvText),
-                readabilityScore: this.calculateReadabilityScore(cvText),
-                sectionAnalysis: this.analyzeSections(cvText)
-            }
-        };
-    }
-
-    performLocalAnalysis(cvText, jobDescription = '') {
-        const analysis = {
-            overallScore: 0,
-            details: [],
-            recommendations: [],
-            atsCompatibility: {
-                score: 0,
-                issues: [],
-                recommendations: []
+    enrichAnalysisWithLocalInsights(analysis, cvText, jobDescription, file) {
+        // Ajouter des insights spécifiques au contexte français
+        const enrichedAnalysis = {
+            ...analysis,
+            fileInfo: {
+                name: file.name,
+                size: file.size,
+                type: file.type,
+                wordCount: cvText.split(/\s+/).length
             },
-            keywordAnalysis: {
-                matchedKeywords: [],
-                missingKeywords: [],
-                suggestions: []
-            }
+            localInsights: this.generateLocalInsights(cvText, jobDescription),
+            sectorAnalysis: this.analyzeSector(cvText),
+            frenchSpecificTips: this.getFrenchSpecificTips(cvText)
         };
 
-        // Analyse de la structure
-        const structureScore = this.analyzeStructure(cvText);
-        analysis.details.push({
-            category: 'Structure et Format',
-            score: structureScore,
-            description: 'Évaluation de l\'organisation et de la lisibilité du CV',
-            issues: structureScore < 70 ? ['Structure à améliorer', 'Sections manquantes'] : [],
-            strengths: structureScore >= 70 ? ['Bonne organisation', 'Sections présentes'] : []
-        });
-
-        // Analyse des mots-clés ATS
-        const keywordScore = this.analyzeKeywords(cvText, jobDescription);
-        analysis.details.push({
-            category: 'Mots-clés et Optimisation ATS',
-            score: keywordScore,
-            description: 'Présence de mots-clés importants pour les systèmes ATS',
-            issues: keywordScore < 70 ? ['Mots-clés insuffisants', 'Optimisation ATS faible'] : [],
-            strengths: keywordScore >= 70 ? ['Bons mots-clés', 'Optimisation correcte'] : []
-        });
-
-        // Analyse du contenu
-        const contentScore = this.analyzeContent(cvText);
-        analysis.details.push({
-            category: 'Contenu et Expérience',
-            score: contentScore,
-            description: 'Richesse et pertinence des informations fournies',
-            issues: contentScore < 70 ? ['Contenu insuffisant', 'Manque de détails'] : [],
-            strengths: contentScore >= 70 ? ['Contenu riche', 'Informations pertinentes'] : []
-        });
-
-        // Analyse de la longueur
-        const lengthScore = this.analyzeLength(cvText);
-        analysis.details.push({
-            category: 'Longueur et Format',
-            score: lengthScore,
-            description: 'Respect de la longueur recommandée pour un CV',
-            issues: lengthScore < 70 ? ['Longueur inadéquate'] : [],
-            strengths: lengthScore >= 70 ? ['Longueur optimale'] : []
-        });
-
-        // Analyse des compétences techniques
-        const techScore = this.analyzeTechnicalSkills(cvText);
-        analysis.details.push({
-            category: 'Compétences Techniques',
-            score: techScore,
-            description: 'Présence et pertinence des compétences techniques',
-            issues: techScore < 70 ? ['Compétences techniques insuffisantes'] : [],
-            strengths: techScore >= 70 ? ['Bonnes compétences techniques'] : []
-        });
-
-        // Calcul du score global
-        analysis.overallScore = Math.round(
-            analysis.details.reduce((sum, detail) => sum + detail.score, 0) / analysis.details.length
+        // Ajuster les recommandations pour le marché français
+        enrichedAnalysis.recommendations = this.adaptRecommendationsForFrance(
+            enrichedAnalysis.recommendations, 
+            cvText
         );
 
-        // Génération des recommandations
-        analysis.recommendations = this.generateRecommendations(analysis);
-        analysis.atsCompatibility = this.analyzeATSCompatibility(cvText);
-        analysis.keywordAnalysis = this.analyzeKeywordMatch(cvText, jobDescription);
-
-        return analysis;
+        return enrichedAnalysis;
     }
 
-    analyzeStructure(cvText) {
-        let score = 60; // Score de base
-
-        // Vérification des sections essentielles
-        const essentialSections = [
-            'expérience', 'formation', 'compétences', 'contact'
-        ];
-
-        essentialSections.forEach(section => {
-            if (cvText.includes(section)) {
-                score += 8;
-            }
-        });
-
-        // Bonus pour une bonne organisation
-        if (cvText.includes('email') && cvText.includes('téléphone')) {
-            score += 5;
-        }
-
-        return Math.min(score, 100);
-    }
-
-    analyzeKeywords(cvText, jobDescription) {
-        let score = 50;
-        let keywordCount = 0;
-
-        // Analyse des mots-clés ATS génériques
-        this.atsKeywords.forEach(keyword => {
-            if (cvText.includes(keyword)) {
-                keywordCount++;
-                score += 3;
-            }
-        });
-
-        // Analyse des mots-clés de la description de poste
-        if (jobDescription) {
-            const jobKeywords = jobDescription.toLowerCase().split(/\s+/)
-                .filter(word => word.length > 3)
-                .slice(0, 20);
-
-            jobKeywords.forEach(keyword => {
-                if (cvText.includes(keyword)) {
-                    score += 2;
-                }
-            });
-        }
-
-        return Math.min(score, 100);
-    }
-
-    analyzeContent(cvText) {
-        let score = 40;
-
-        const wordCount = cvText.split(/\s+/).length;
-        
-        if (wordCount > 200) score += 20;
-        if (wordCount > 400) score += 15;
-        if (wordCount > 600) score += 10;
-
-        // Vérification de la présence d'informations quantifiées
-        const numberPattern = /\d+/g;
-        const numbers = cvText.match(numberPattern);
-        if (numbers && numbers.length > 5) {
-            score += 15;
-        }
-
-        return Math.min(score, 100);
-    }
-
-    analyzeLength(cvText) {
-        const wordCount = cvText.split(/\s+/).length;
-        
-        if (wordCount >= 300 && wordCount <= 800) {
-            return 100;
-        } else if (wordCount >= 200 && wordCount < 300) {
-            return 75;
-        } else if (wordCount > 800 && wordCount <= 1000) {
-            return 80;
-        } else if (wordCount < 200) {
-            return 40;
-        } else {
-            return 60;
-        }
-    }
-
-    analyzeTechnicalSkills(cvText) {
-        let score = 30;
-        let techKeywordCount = 0;
-
-        this.technicalKeywords.forEach(keyword => {
-            if (cvText.includes(keyword)) {
-                techKeywordCount++;
-                score += 4;
-            }
-        });
-
-        if (techKeywordCount > 5) score += 10;
-        if (techKeywordCount > 10) score += 10;
-
-        return Math.min(score, 100);
-    }
-
-    analyzeATSCompatibility(cvText) {
-        let score = 70;
-        const issues = [];
-        const recommendations = [];
-
-        // Vérifications ATS
-        if (cvText.includes('tableau') || cvText.includes('image')) {
-            score -= 15;
-            issues.push('Présence possible de tableaux ou images');
-            recommendations.push('Éviter les tableaux complexes et images');
-        }
-
-        if (cvText.length < 500) {
-            score -= 10;
-            issues.push('CV trop court');
-            recommendations.push('Enrichir le contenu du CV');
-        }
-
-        return {
-            score: Math.max(score, 0),
-            issues,
-            recommendations
+    generateLocalInsights(cvText, jobDescription) {
+        const insights = {
+            keywordDensity: this.calculateKeywordDensity(cvText),
+            readabilityScore: this.calculateReadabilityScore(cvText),
+            professionalLevel: this.assessProfessionalLevel(cvText),
+            geographicRelevance: this.assessGeographicRelevance(cvText),
+            industryAlignment: this.assessIndustryAlignment(cvText, jobDescription)
         };
-    }
 
-    analyzeKeywordMatch(cvText, jobDescription) {
-        const matchedKeywords = [];
-        const missingKeywords = [];
-        const suggestions = [];
-
-        // Analyse basique des mots-clés
-        this.atsKeywords.forEach(keyword => {
-            if (cvText.includes(keyword)) {
-                matchedKeywords.push(keyword);
-            } else {
-                missingKeywords.push(keyword);
-            }
-        });
-
-        if (jobDescription) {
-            suggestions.push('Intégrer plus de mots-clés de la description de poste');
-            suggestions.push('Adapter le vocabulaire au secteur d\'activité');
-        }
-
-        return {
-            matchedKeywords: matchedKeywords.slice(0, 10),
-            missingKeywords: missingKeywords.slice(0, 5),
-            suggestions
-        };
+        return insights;
     }
 
     calculateKeywordDensity(cvText) {
-        const words = cvText.split(/\s+/);
-        const keywordCount = this.atsKeywords.filter(keyword => 
-            cvText.includes(keyword)
-        ).length;
+        const words = cvText.toLowerCase().split(/\s+/);
+        const totalWords = words.length;
         
-        return Math.round((keywordCount / words.length) * 100 * 100) / 100;
+        let professionalKeywordCount = 0;
+        let technicalKeywordCount = 0;
+
+        this.professionalKeywords.forEach(keyword => {
+            const regex = new RegExp(keyword, 'gi');
+            const matches = cvText.match(regex);
+            if (matches) professionalKeywordCount += matches.length;
+        });
+
+        this.technicalKeywords.forEach(keyword => {
+            const regex = new RegExp(keyword, 'gi');
+            const matches = cvText.match(regex);
+            if (matches) technicalKeywordCount += matches.length;
+        });
+
+        return {
+            professional: Math.round((professionalKeywordCount / totalWords) * 100 * 100) / 100,
+            technical: Math.round((technicalKeywordCount / totalWords) * 100 * 100) / 100,
+            total: Math.round(((professionalKeywordCount + technicalKeywordCount) / totalWords) * 100 * 100) / 100
+        };
     }
 
     calculateReadabilityScore(cvText) {
-        // Score de lisibilité simplifié
-        const sentences = cvText.split(/[.!?]+/).length;
-        const words = cvText.split(/\s+/).length;
-        const avgWordsPerSentence = words / sentences;
+        const sentences = cvText.split(/[.!?]+/).filter(s => s.trim().length > 0);
+        const words = cvText.split(/\s+/);
+        const avgWordsPerSentence = words.length / sentences.length;
         
-        // Score basé sur la longueur moyenne des phrases
-        if (avgWordsPerSentence <= 15) return 90;
-        if (avgWordsPerSentence <= 20) return 80;
-        if (avgWordsPerSentence <= 25) return 70;
-        return 60;
+        // Score basé sur la complexité des phrases (adapté au français)
+        let score = 100;
+        if (avgWordsPerSentence > 25) score -= 20;
+        else if (avgWordsPerSentence > 20) score -= 10;
+        else if (avgWordsPerSentence > 15) score -= 5;
+
+        // Pénalité pour les phrases trop courtes (manque de détail)
+        if (avgWordsPerSentence < 8) score -= 15;
+
+        return Math.max(score, 0);
     }
 
-    analyzeSections(cvText) {
-        const sections = {
-            contact: cvText.includes('email') || cvText.includes('téléphone'),
-            experience: cvText.includes('expérience') || cvText.includes('poste'),
-            education: cvText.includes('formation') || cvText.includes('diplôme'),
-            skills: cvText.includes('compétences') || cvText.includes('skills'),
-            summary: cvText.includes('résumé') || cvText.includes('profil')
+    assessProfessionalLevel(cvText) {
+        const seniorKeywords = ['senior', 'lead', 'chef', 'directeur', 'manager', 'responsable', 'expert'];
+        const managementKeywords = ['équipe', 'management', 'encadrement', 'supervision', 'direction'];
+        const experienceYears = this.extractExperienceYears(cvText);
+
+        let level = 'junior';
+        let score = 0;
+
+        seniorKeywords.forEach(keyword => {
+            if (new RegExp(keyword, 'i').test(cvText)) score += 2;
+        });
+
+        managementKeywords.forEach(keyword => {
+            if (new RegExp(keyword, 'i').test(cvText)) score += 1;
+        });
+
+        if (experienceYears >= 8 || score >= 6) level = 'senior';
+        else if (experienceYears >= 4 || score >= 3) level = 'confirmé';
+        else if (experienceYears >= 2 || score >= 1) level = 'junior+';
+
+        return {
+            level,
+            score,
+            estimatedYears: experienceYears
         };
-
-        return sections;
     }
 
-    generateRecommendations(analysis) {
-        const recommendations = [];
+    extractExperienceYears(cvText) {
+        // Recherche de patterns d'années d'expérience
+        const yearPatterns = [
+            /(\d+)\s*ans?\s*(d'|de\s+)?expérience/gi,
+            /expérience\s*de\s*(\d+)\s*ans?/gi,
+            /(\d+)\s*années?\s*(d'|de\s+)?expérience/gi
+        ];
 
-        analysis.details.forEach(detail => {
-            if (detail.score < 70) {
-                switch (detail.category) {
-                    case 'Structure et Format':
-                        recommendations.push({
-                            priority: 'high',
-                            title: 'Améliorer la structure',
-                            description: 'Organisez votre CV avec des sections claires : Contact, Résumé, Expérience, Formation, Compétences.',
-                            impact: 'Meilleure lisibilité pour les recruteurs et les ATS'
-                        });
-                        break;
-                    case 'Mots-clés et Optimisation ATS':
-                        recommendations.push({
-                            priority: 'high',
-                            title: 'Optimiser les mots-clés',
-                            description: 'Intégrez plus de mots-clés pertinents de votre secteur et de l\'offre d\'emploi visée.',
-                            impact: 'Augmentation significative des chances de passage des filtres ATS'
-                        });
-                        break;
-                    case 'Contenu et Expérience':
-                        recommendations.push({
-                            priority: 'medium',
-                            title: 'Enrichir le contenu',
-                            description: 'Ajoutez plus de détails sur vos réalisations avec des chiffres et des résultats concrets.',
-                            impact: 'Meilleure démonstration de votre valeur ajoutée'
-                        });
-                        break;
-                    case 'Compétences Techniques':
-                        recommendations.push({
-                            priority: 'medium',
-                            title: 'Détailler les compétences techniques',
-                            description: 'Listez clairement vos compétences techniques avec le niveau de maîtrise.',
-                            impact: 'Meilleur matching avec les exigences techniques des postes'
-                        });
-                        break;
-                }
+        for (let pattern of yearPatterns) {
+            const matches = cvText.match(pattern);
+            if (matches) {
+                const numbers = matches[0].match(/\d+/);
+                if (numbers) return parseInt(numbers[0]);
+            }
+        }
+
+        // Estimation basée sur les dates
+        const years = this.extractYearsFromDates(cvText);
+        if (years.length >= 2) {
+            return Math.max(...years) - Math.min(...years);
+        }
+
+        return 0;
+    }
+
+    extractYearsFromDates(cvText) {
+        const yearPattern = /\b(20\d{2}|19\d{2})\b/g;
+        const matches = cvText.match(yearPattern);
+        return matches ? matches.map(year => parseInt(year)) : [];
+    }
+
+    assessGeographicRelevance(cvText) {
+        const frenchCities = [
+            'paris', 'lyon', 'marseille', 'toulouse', 'nice', 'nantes', 'montpellier',
+            'strasbourg', 'bordeaux', 'lille', 'rennes', 'reims', 'toulon', 'grenoble'
+        ];
+
+        const frenchRegions = [
+            'île-de-france', 'auvergne-rhône-alpes', 'nouvelle-aquitaine', 'occitanie',
+            'hauts-de-france', 'grand est', 'provence-alpes-côte d\'azur', 'pays de la loire'
+        ];
+
+        let relevanceScore = 0;
+        let location = 'non spécifiée';
+
+        frenchCities.forEach(city => {
+            if (new RegExp(city, 'i').test(cvText)) {
+                relevanceScore += 10;
+                location = city;
             }
         });
 
-        // Recommandations générales
-        if (analysis.overallScore < 80) {
-            recommendations.push({
-                priority: 'high',
-                title: 'Format ATS-friendly',
-                description: 'Utilisez un format simple, évitez les tableaux complexes et les images dans le texte.',
-                impact: 'Garantie de lecture correcte par tous les systèmes ATS'
+        frenchRegions.forEach(region => {
+            if (new RegExp(region, 'i').test(cvText)) {
+                relevanceScore += 5;
+            }
+        });
+
+        if (new RegExp('france', 'i').test(cvText)) {
+            relevanceScore += 5;
+        }
+
+        return {
+            score: Math.min(relevanceScore, 100),
+            location,
+            isRelevant: relevanceScore > 0
+        };
+    }
+
+    assessIndustryAlignment(cvText, jobDescription) {
+        let bestMatch = { sector: 'généraliste', score: 0, keywords: [] };
+
+        Object.entries(this.sectorKeywords).forEach(([sector, keywords]) => {
+            let sectorScore = 0;
+            const matchedKeywords = [];
+
+            keywords.forEach(keyword => {
+                const cvMatches = (cvText.match(new RegExp(keyword, 'gi')) || []).length;
+                const jobMatches = jobDescription ? 
+                    (jobDescription.match(new RegExp(keyword, 'gi')) || []).length : 0;
+
+                if (cvMatches > 0) {
+                    sectorScore += cvMatches * (jobMatches > 0 ? 2 : 1);
+                    matchedKeywords.push(keyword);
+                }
+            });
+
+            if (sectorScore > bestMatch.score) {
+                bestMatch = { sector, score: sectorScore, keywords: matchedKeywords };
+            }
+        });
+
+        return bestMatch;
+    }
+
+    analyzeSector(cvText) {
+        const sectorAnalysis = this.assessIndustryAlignment(cvText, '');
+        
+        return {
+            identifiedSector: sectorAnalysis.sector,
+            confidence: Math.min((sectorAnalysis.score / 10) * 100, 100),
+            relevantKeywords: sectorAnalysis.keywords,
+            recommendations: this.getSectorSpecificRecommendations(sectorAnalysis.sector)
+        };
+    }
+
+    getSectorSpecificRecommendations(sector) {
+        const recommendations = {
+            'tech': [
+                'Mentionnez vos contributions open source',
+                'Détaillez vos projets techniques avec les technologies utilisées',
+                'Quantifiez les performances et optimisations réalisées'
+            ],
+            'marketing': [
+                'Quantifiez vos résultats (ROI, taux de conversion, croissance)',
+                'Mentionnez vos certifications (Google, Facebook, HubSpot)',
+                'Détaillez vos campagnes les plus réussies'
+            ],
+            'finance': [
+                'Précisez les montants et budgets gérés',
+                'Mentionnez vos certifications professionnelles',
+                'Détaillez votre expertise réglementaire'
+            ],
+            'rh': [
+                'Quantifiez vos recrutements et formations',
+                'Mentionnez votre connaissance du droit social',
+                'Détaillez vos projets de transformation RH'
+            ],
+            'commercial': [
+                'Quantifiez vos résultats de vente (CA, objectifs)',
+                'Mentionnez la taille de votre portefeuille client',
+                'Détaillez vos techniques de négociation'
+            ]
+        };
+
+        return recommendations[sector] || [
+            'Quantifiez vos réalisations avec des chiffres précis',
+            'Utilisez des verbes d\'action forts',
+            'Adaptez votre vocabulaire au secteur visé'
+        ];
+    }
+
+    getFrenchSpecificTips(cvText) {
+        const tips = [];
+
+        // Vérification de la photo (déconseillée en France sauf exceptions)
+        if (/photo|image/i.test(cvText)) {
+            tips.push({
+                type: 'warning',
+                title: 'Photo sur le CV',
+                description: 'En France, la photo n\'est généralement pas recommandée sauf pour certains métiers spécifiques (commercial, accueil).'
             });
         }
 
-        return recommendations;
+        // Longueur du CV
+        const wordCount = cvText.split(/\s+/).length;
+        if (wordCount > 800) {
+            tips.push({
+                type: 'info',
+                title: 'Longueur du CV',
+                description: 'En France, un CV d\'une page est souvent préféré, sauf pour les profils très expérimentés.'
+            });
+        }
+
+        // Informations personnelles
+        if (!/âge|né|naissance/i.test(cvText)) {
+            tips.push({
+                type: 'success',
+                title: 'Informations personnelles',
+                description: 'Bien ! Vous n\'avez pas mentionné votre âge, ce qui est recommandé pour éviter les discriminations.'
+            });
+        }
+
+        return tips;
+    }
+
+    adaptRecommendationsForFrance(recommendations, cvText) {
+        // Ajouter des recommandations spécifiques au marché français
+        const frenchRecommendations = [...recommendations];
+
+        // Vérifier la présence de certifications françaises
+        if (!/cqp|rncp|titre professionnel/i.test(cvText)) {
+            frenchRecommendations.push({
+                priority: 'low',
+                title: 'Certifications françaises',
+                description: 'Considérez l\'ajout de certifications reconnues en France (RNCP, CQP, titres professionnels) pour renforcer votre profil.',
+                impact: 'Meilleure reconnaissance de vos qualifications par les recruteurs français'
+            });
+        }
+
+        // Recommandation sur les soft skills à la française
+        frenchRecommendations.push({
+            priority: 'low',
+            title: 'Adaptation culturelle',
+            description: 'Mettez en avant des qualités appréciées en France : rigueur, esprit d\'analyse, capacité d\'adaptation et sens du collectif.',
+            impact: 'Meilleure adéquation avec les attentes culturelles des entreprises françaises'
+        });
+
+        return frenchRecommendations;
     }
 }
