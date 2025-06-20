@@ -1,12 +1,13 @@
 import { CVGenerator } from './cv-generator.js';
 import { CVAnalyzer } from './cv-analyzer.js';
+import { CVImprover } from './cv-improver.js';
 import { templates } from './templates.js';
 
 class CVApp {
     constructor() {
         this.currentStep = 1;
         this.selectedTemplate = 'modern';
-        this.currentTab = 'create';
+        this.currentTab = 'home';
         this.cvData = {
             personal: {},
             experience: [],
@@ -16,6 +17,7 @@ class CVApp {
         };
         this.cvGenerator = new CVGenerator();
         this.cvAnalyzer = new CVAnalyzer();
+        this.cvImprover = new CVImprover();
         this.init();
     }
 
@@ -28,8 +30,14 @@ class CVApp {
 
     bindEvents() {
         // Tab navigation
+        document.getElementById('homeTab').addEventListener('click', () => this.switchTab('home'));
         document.getElementById('createTab').addEventListener('click', () => this.switchTab('create'));
         document.getElementById('analyzeTab').addEventListener('click', () => this.switchTab('analyze'));
+        document.getElementById('improveTab').addEventListener('click', () => this.switchTab('improve'));
+
+        // Home page buttons
+        document.getElementById('createNewCV').addEventListener('click', () => this.switchTab('create'));
+        document.getElementById('improveExistingCV').addEventListener('click', () => this.switchTab('improve'));
 
         // Create CV navigation
         document.getElementById('nextToTemplate').addEventListener('click', () => this.goToStep(2));
@@ -63,10 +71,16 @@ class CVApp {
         document.querySelectorAll('#zoomOut').forEach(btn => {
             btn.addEventListener('click', () => this.zoomPreview(0.9));
         });
+        document.getElementById('zoomIn2').addEventListener('click', () => this.zoomPreviewFinal(1.1));
+        document.getElementById('zoomOut2').addEventListener('click', () => this.zoomPreviewFinal(0.9));
 
         // CV Analysis
         document.getElementById('cvFile').addEventListener('change', (e) => this.handleFileUpload(e));
         document.getElementById('analyzeBtn').addEventListener('click', () => this.analyzeCV());
+
+        // CV Improvement
+        document.getElementById('improveCvFile').addEventListener('change', (e) => this.handleImproveFileUpload(e));
+        document.getElementById('improveBtn').addEventListener('click', () => this.improveCV());
     }
 
     switchTab(tab) {
@@ -74,17 +88,19 @@ class CVApp {
         
         // Update tab buttons
         document.querySelectorAll('.tab-button').forEach(btn => {
-            btn.classList.remove('active', 'border-white', 'text-white');
-            btn.classList.add('border-transparent', 'text-white/70');
+            btn.classList.remove('text-primary-700', 'border-b-2', 'border-primary-500');
+            btn.classList.add('text-gray-600');
         });
         
         const activeTab = document.getElementById(`${tab}Tab`);
-        activeTab.classList.add('active', 'border-white', 'text-white');
-        activeTab.classList.remove('border-transparent', 'text-white/70');
+        activeTab.classList.remove('text-gray-600');
+        activeTab.classList.add('text-primary-700', 'border-b-2', 'border-primary-500');
 
         // Show/hide sections
+        document.getElementById('homeSection').classList.toggle('hidden', tab !== 'home');
         document.getElementById('createSection').classList.toggle('hidden', tab !== 'create');
         document.getElementById('analyzeSection').classList.toggle('hidden', tab !== 'analyze');
+        document.getElementById('improveSection').classList.toggle('hidden', tab !== 'improve');
     }
 
     handleFileUpload(event) {
@@ -119,10 +135,45 @@ class CVApp {
         event.target.closest('.bg-white').appendChild(fileInfo);
 
         // Read file content for preview
-        this.readFileContent(file);
+        this.readFileContent(file, 'analyzedCvPreview');
     }
 
-    readFileContent(file) {
+    handleImproveFileUpload(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+
+        const improveBtn = document.getElementById('improveBtn');
+        improveBtn.disabled = false;
+
+        // Show file info
+        const fileName = file.name;
+        const fileSize = (file.size / 1024).toFixed(2);
+        const fileInfo = document.createElement('div');
+        fileInfo.className = 'mt-4 p-4 bg-green-50 border border-green-200 rounded-xl animate-slide-up';
+        fileInfo.innerHTML = `
+            <div class="flex items-center">
+                <div class="w-12 h-12 bg-green-500 rounded-xl flex items-center justify-center mr-4">
+                    <i class="fas fa-file-alt text-white"></i>
+                </div>
+                <div>
+                    <p class="font-semibold text-green-800">Fichier sélectionné</p>
+                    <p class="text-green-700">${fileName} (${fileSize} KB)</p>
+                </div>
+            </div>
+        `;
+        
+        // Remove previous file info
+        const existingInfo = event.target.closest('.bg-white').querySelector('.file-info');
+        if (existingInfo) existingInfo.remove();
+        
+        fileInfo.classList.add('file-info');
+        event.target.closest('.bg-white').appendChild(fileInfo);
+
+        // Read file content for preview
+        this.readFileContent(file, 'improveCvPreview');
+    }
+
+    readFileContent(file, previewElementId) {
         const reader = new FileReader();
         
         reader.onload = (e) => {
@@ -136,7 +187,7 @@ class CVApp {
             }
 
             // Update preview with clean styling
-            document.getElementById('analyzedCvPreview').innerHTML = `
+            document.getElementById(previewElementId).innerHTML = `
                 <div class="p-8 text-sm text-gray-700 whitespace-pre-wrap max-h-96 overflow-y-auto bg-blue-50 rounded-xl">
                     <div class="mb-4 p-4 bg-white rounded-lg shadow-sm">
                         <h4 class="font-bold text-blue-900 mb-2 flex items-center">
@@ -193,6 +244,147 @@ class CVApp {
             spinner.classList.add('hidden');
             btnText.textContent = 'Analyser avec l\'IA';
             analyzeBtn.classList.remove('animate-pulse');
+        }
+    }
+
+    async improveCV() {
+        const fileInput = document.getElementById('improveCvFile');
+        const targetJob = document.getElementById('targetJobDescription').value;
+        const focusAreas = Array.from(document.querySelectorAll('.improvement-focus:checked')).map(cb => cb.value);
+        const improveBtn = document.getElementById('improveBtn');
+        const spinner = document.getElementById('improveSpinner');
+        const btnText = document.getElementById('improveBtnText');
+
+        if (!fileInput.files[0]) {
+            this.showError('Veuillez sélectionner un fichier CV');
+            return;
+        }
+
+        // Show loading state
+        improveBtn.disabled = true;
+        spinner.classList.remove('hidden');
+        btnText.textContent = 'Génération des améliorations...';
+        improveBtn.classList.add('animate-pulse');
+
+        try {
+            this.showInfo('🚀 Génération des suggestions d\'amélioration...');
+            
+            const file = fileInput.files[0];
+            const improvementResult = await this.cvImprover.improveCV(file, targetJob, focusAreas);
+            
+            this.displayImprovementResults(improvementResult);
+            this.showSuccess('✨ Suggestions générées avec succès !');
+            
+        } catch (error) {
+            console.error('Erreur lors de l\'amélioration:', error);
+            this.showError('❌ Erreur lors de la génération des améliorations. Veuillez réessayer.');
+        } finally {
+            // Reset button state
+            improveBtn.disabled = false;
+            spinner.classList.add('hidden');
+            btnText.textContent = 'Générer les améliorations';
+            improveBtn.classList.remove('animate-pulse');
+        }
+    }
+
+    displayImprovementResults(results) {
+        const resultsSection = document.getElementById('improvementResults');
+        const summaryElement = document.getElementById('improvementSummary');
+        const detailedElement = document.getElementById('detailedImprovements');
+        const comparisonElement = document.getElementById('beforeAfterComparison');
+
+        // Show results section
+        resultsSection.classList.remove('hidden');
+        resultsSection.classList.add('animate-slide-up');
+
+        // Display summary
+        summaryElement.innerHTML = `
+            <div class="text-center p-6 bg-blue-50 rounded-xl">
+                <div class="w-12 h-12 bg-blue-500 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <i class="fas fa-chart-line text-white"></i>
+                </div>
+                <h4 class="font-bold text-blue-900 mb-2">Score d'amélioration</h4>
+                <div class="text-3xl font-bold text-blue-600">${results.improvementScore || 85}%</div>
+                <p class="text-blue-700 text-sm">Potentiel d'amélioration</p>
+            </div>
+            <div class="text-center p-6 bg-green-50 rounded-xl">
+                <div class="w-12 h-12 bg-green-500 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <i class="fas fa-lightbulb text-white"></i>
+                </div>
+                <h4 class="font-bold text-green-900 mb-2">Suggestions</h4>
+                <div class="text-3xl font-bold text-green-600">${results.suggestions?.length || 12}</div>
+                <p class="text-green-700 text-sm">Améliorations proposées</p>
+            </div>
+            <div class="text-center p-6 bg-purple-50 rounded-xl">
+                <div class="w-12 h-12 bg-purple-500 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <i class="fas fa-target text-white"></i>
+                </div>
+                <h4 class="font-bold text-purple-900 mb-2">Impact ATS</h4>
+                <div class="text-3xl font-bold text-purple-600">+${results.atsImprovement || 25}%</div>
+                <p class="text-purple-700 text-sm">Amélioration compatibilité</p>
+            </div>
+        `;
+
+        // Display detailed improvements
+        if (results.suggestions) {
+            detailedElement.innerHTML = results.suggestions.map(suggestion => `
+                <div class="border border-gray-200 rounded-xl p-6 hover:shadow-lg transition-shadow">
+                    <div class="flex items-start justify-between mb-4">
+                        <h4 class="text-lg font-bold text-gray-900">${suggestion.title}</h4>
+                        <span class="px-3 py-1 text-xs font-semibold rounded-full ${this.getPriorityBadge(suggestion.priority)}">
+                            ${suggestion.priority === 'high' ? 'HAUTE' : suggestion.priority === 'medium' ? 'MOYENNE' : 'BASSE'}
+                        </span>
+                    </div>
+                    <p class="text-gray-700 mb-4">${suggestion.description}</p>
+                    ${suggestion.example ? `
+                        <div class="bg-gray-50 rounded-lg p-4">
+                            <h5 class="font-semibold text-gray-800 mb-2">Exemple d'amélioration:</h5>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div>
+                                    <p class="text-sm text-red-700 font-medium mb-1">❌ Avant:</p>
+                                    <p class="text-sm text-gray-600">${suggestion.example.before}</p>
+                                </div>
+                                <div>
+                                    <p class="text-sm text-green-700 font-medium mb-1">✅ Après:</p>
+                                    <p class="text-sm text-gray-600">${suggestion.example.after}</p>
+                                </div>
+                            </div>
+                        </div>
+                    ` : ''}
+                </div>
+            `).join('');
+        }
+
+        // Display comparison if available
+        if (results.comparison) {
+            comparisonElement.innerHTML = `
+                <div>
+                    <h4 class="font-bold text-gray-900 mb-4 text-center">Version Actuelle</h4>
+                    <div class="bg-red-50 border border-red-200 rounded-xl p-6">
+                        <div class="space-y-3">
+                            ${results.comparison.before.map(item => `
+                                <div class="flex items-center text-red-700">
+                                    <i class="fas fa-times-circle mr-2"></i>
+                                    <span class="text-sm">${item}</span>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                </div>
+                <div>
+                    <h4 class="font-bold text-gray-900 mb-4 text-center">Version Améliorée</h4>
+                    <div class="bg-green-50 border border-green-200 rounded-xl p-6">
+                        <div class="space-y-3">
+                            ${results.comparison.after.map(item => `
+                                <div class="flex items-center text-green-700">
+                                    <i class="fas fa-check-circle mr-2"></i>
+                                    <span class="text-sm">${item}</span>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                </div>
+            `;
         }
     }
 
@@ -451,14 +643,14 @@ class CVApp {
             if (stepNum <= step) {
                 circle.classList.remove('bg-gray-400');
                 circle.classList.add('bg-blue-600', 'shadow-lg');
-                text.classList.remove('text-gray-300');
-                text.classList.add('text-white');
+                text.classList.remove('text-gray-500');
+                text.classList.add('text-primary-700');
                 indicator.classList.add('active');
             } else {
                 circle.classList.remove('bg-blue-600', 'shadow-lg');
                 circle.classList.add('bg-gray-400');
-                text.classList.remove('text-white');
-                text.classList.add('text-gray-300');
+                text.classList.remove('text-primary-700');
+                text.classList.add('text-gray-500');
                 indicator.classList.remove('active');
             }
         });
@@ -706,12 +898,14 @@ class CVApp {
     generateCV() {
         this.collectFormData();
         this.updatePreview();
+        // Copy preview to final preview
+        document.getElementById('cvPreviewFinal').innerHTML = document.getElementById('cvPreview').innerHTML;
         this.goToStep(3);
     }
 
     async downloadPDF() {
         const { jsPDF } = window.jspdf;
-        const cvElement = document.getElementById('cvPreview');
+        const cvElement = document.getElementById('cvPreviewFinal');
         
         try {
             this.showInfo('📄 Génération du PDF en cours...');
@@ -840,6 +1034,13 @@ class CVApp {
 
     zoomPreview(factor) {
         const preview = document.getElementById('cvPreview');
+        const currentScale = parseFloat(preview.style.transform.match(/scale\((.*?)\)/)?.[1] || '0.75');
+        const newScale = Math.max(0.5, Math.min(1.2, currentScale * factor));
+        preview.style.transform = `scale(${newScale})`;
+    }
+
+    zoomPreviewFinal(factor) {
+        const preview = document.getElementById('cvPreviewFinal');
         const currentScale = parseFloat(preview.style.transform.match(/scale\((.*?)\)/)?.[1] || '0.75');
         const newScale = Math.max(0.5, Math.min(1.2, currentScale * factor));
         preview.style.transform = `scale(${newScale})`;
