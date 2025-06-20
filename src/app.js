@@ -1,47 +1,53 @@
 import { CVGenerator } from './cv-generator.js';
 import { CVAnalyzer } from './cv-analyzer.js';
 import { CVImprover } from './cv-improver.js';
-import { templates } from './templates.js';
+import { PaymentService } from './templates.js';
 
-class CVApp {
+class MyCVApp {
     constructor() {
+        this.cvGenerator = new CVGenerator();
+        this.cvAnalyzer = new CVAnalyzer();
+        this.cvImprover = new CVImprover();
+        this.paymentService = new PaymentService();
+        
         this.currentStep = 1;
         this.selectedTemplate = 'modern';
-        this.currentTab = 'home';
         this.cvData = {
             personal: {},
-            experience: [],
+            experiences: [],
             education: [],
             skills: {},
             languages: ''
         };
-        this.cvGenerator = new CVGenerator();
-        this.cvAnalyzer = new CVAnalyzer();
-        this.cvImprover = new CVImprover();
+        this.experienceCount = 0;
+        this.educationCount = 0;
+        this.zoomLevel = 0.75;
+        this.selectedPaymentMethod = null;
+        
         this.init();
     }
 
     init() {
-        this.bindEvents();
-        this.loadFromStorage();
-        this.addDefaultExperience();
-        this.addDefaultEducation();
+        this.setupEventListeners();
+        this.setupFormValidation();
+        this.setupPaymentModal();
+        this.loadSavedData();
     }
 
-    bindEvents() {
-        // Tab navigation
-        document.getElementById('homeTab').addEventListener('click', () => this.switchTab('home'));
-        document.getElementById('createTab').addEventListener('click', () => this.switchTab('create'));
-        document.getElementById('analyzeTab').addEventListener('click', () => this.switchTab('analyze'));
-        document.getElementById('improveTab').addEventListener('click', () => this.switchTab('improve'));
+    setupEventListeners() {
+        // Navigation tabs
+        document.getElementById('homeTab').addEventListener('click', () => this.showSection('home'));
+        document.getElementById('createTab').addEventListener('click', () => this.showSection('create'));
+        document.getElementById('analyzeTab').addEventListener('click', () => this.showSection('analyze'));
+        document.getElementById('improveTab').addEventListener('click', () => this.showSection('improve'));
 
-        // Home page buttons
-        document.getElementById('createNewCV').addEventListener('click', () => this.switchTab('create'));
-        document.getElementById('improveExistingCV').addEventListener('click', () => this.switchTab('improve'));
+        // Home section buttons
+        document.getElementById('createNewCV').addEventListener('click', () => this.showSection('create'));
+        document.getElementById('improveExistingCV').addEventListener('click', () => this.showSection('improve'));
 
-        // Create CV navigation
-        document.getElementById('nextToTemplate').addEventListener('click', () => this.goToStep(2));
-        document.getElementById('backToInfo').addEventListener('click', () => this.goToStep(1));
+        // CV Creation steps
+        document.getElementById('nextToTemplate').addEventListener('click', () => this.nextStep());
+        document.getElementById('backToInfo').addEventListener('click', () => this.previousStep());
         document.getElementById('generateCV').addEventListener('click', () => this.generateCV());
         document.getElementById('backToTemplate').addEventListener('click', () => this.goToStep(2));
         document.getElementById('newCV').addEventListener('click', () => this.resetForm());
@@ -52,787 +58,280 @@ class CVApp {
 
         // Template selection
         document.querySelectorAll('.template-option').forEach(option => {
-            option.addEventListener('click', (e) => this.selectTemplate(e.currentTarget.dataset.template));
+            option.addEventListener('click', () => this.selectTemplate(option.dataset.template));
         });
-
-        // Form inputs - live preview
-        this.bindFormInputs();
-
-        // Actions
-        document.getElementById('downloadPDF').addEventListener('click', () => this.downloadPDF());
-        document.getElementById('printCV').addEventListener('click', () => this.printCV());
-        document.getElementById('saveBtn').addEventListener('click', () => this.saveToStorage());
-        document.getElementById('loadBtn').addEventListener('click', () => this.loadFromStorage());
 
         // Zoom controls
-        document.querySelectorAll('#zoomIn').forEach(btn => {
-            btn.addEventListener('click', () => this.zoomPreview(1.1));
-        });
-        document.querySelectorAll('#zoomOut').forEach(btn => {
-            btn.addEventListener('click', () => this.zoomPreview(0.9));
-        });
-        document.getElementById('zoomIn2').addEventListener('click', () => this.zoomPreviewFinal(1.1));
-        document.getElementById('zoomOut2').addEventListener('click', () => this.zoomPreviewFinal(0.9));
+        document.getElementById('zoomIn').addEventListener('click', () => this.zoomIn());
+        document.getElementById('zoomOut').addEventListener('click', () => this.zoomOut());
+        document.getElementById('zoomIn2').addEventListener('click', () => this.zoomIn('cvPreviewFinal'));
+        document.getElementById('zoomOut2').addEventListener('click', () => this.zoomOut('cvPreviewFinal'));
+
+        // Actions
+        document.getElementById('downloadPDF').addEventListener('click', () => this.showPaymentModal());
+        document.getElementById('printCV').addEventListener('click', () => this.printCV());
+        document.getElementById('saveBtn').addEventListener('click', () => this.saveCV());
+        document.getElementById('loadBtn').addEventListener('click', () => this.loadCV());
 
         // CV Analysis
-        document.getElementById('cvFile').addEventListener('change', (e) => this.handleFileUpload(e));
+        document.getElementById('cvFile').addEventListener('change', (e) => this.handleFileUpload(e, 'analyze'));
         document.getElementById('analyzeBtn').addEventListener('click', () => this.analyzeCV());
 
         // CV Improvement
-        document.getElementById('improveCvFile').addEventListener('change', (e) => this.handleImproveFileUpload(e));
+        document.getElementById('improveCvFile').addEventListener('change', (e) => this.handleFileUpload(e, 'improve'));
         document.getElementById('improveBtn').addEventListener('click', () => this.improveCV());
+
+        // Form inputs for live preview
+        this.setupLivePreview();
     }
 
-    switchTab(tab) {
-        this.currentTab = tab;
+    setupPaymentModal() {
+        const paymentModal = document.getElementById('paymentModal');
+        const closePaymentModal = document.getElementById('closePaymentModal');
+        const cancelPayment = document.getElementById('cancelPayment');
+        const processPayment = document.getElementById('processPayment');
+        const paymentMethods = document.querySelectorAll('.payment-method');
+        const phoneNumberSection = document.getElementById('phoneNumberSection');
+
+        closePaymentModal.addEventListener('click', () => this.hidePaymentModal());
+        cancelPayment.addEventListener('click', () => this.hidePaymentModal());
+
+        paymentMethods.forEach(method => {
+            method.addEventListener('click', () => {
+                // Remove selection from all methods
+                paymentMethods.forEach(m => {
+                    m.classList.remove('border-blue-500', 'bg-blue-50');
+                    m.querySelector('.payment-radio').classList.remove('bg-blue-500', 'border-blue-500');
+                    m.querySelector('.payment-radio').classList.add('border-gray-300');
+                });
+
+                // Select current method
+                method.classList.add('border-blue-500', 'bg-blue-50');
+                const radio = method.querySelector('.payment-radio');
+                radio.classList.remove('border-gray-300');
+                radio.classList.add('bg-blue-500', 'border-blue-500');
+
+                this.selectedPaymentMethod = method.dataset.method;
+
+                // Show phone number input for mobile money
+                if (['orange', 'moov'].includes(this.selectedPaymentMethod)) {
+                    phoneNumberSection.classList.remove('hidden');
+                } else {
+                    phoneNumberSection.classList.add('hidden');
+                }
+
+                processPayment.disabled = false;
+            });
+        });
+
+        processPayment.addEventListener('click', () => this.processPayment());
+    }
+
+    showPaymentModal() {
+        document.getElementById('paymentModal').classList.remove('hidden');
+    }
+
+    hidePaymentModal() {
+        document.getElementById('paymentModal').classList.add('hidden');
+        this.selectedPaymentMethod = null;
+        document.getElementById('processPayment').disabled = true;
         
-        // Update tab buttons
-        document.querySelectorAll('.tab-button').forEach(btn => {
-            btn.classList.remove('text-primary-700', 'border-b-2', 'border-primary-500');
-            btn.classList.add('text-gray-600');
+        // Reset payment method selection
+        document.querySelectorAll('.payment-method').forEach(method => {
+            method.classList.remove('border-blue-500', 'bg-blue-50');
+            method.querySelector('.payment-radio').classList.remove('bg-blue-500', 'border-blue-500');
+            method.querySelector('.payment-radio').classList.add('border-gray-300');
         });
         
-        const activeTab = document.getElementById(`${tab}Tab`);
-        activeTab.classList.remove('text-gray-600');
-        activeTab.classList.add('text-primary-700', 'border-b-2', 'border-primary-500');
-
-        // Show/hide sections
-        document.getElementById('homeSection').classList.toggle('hidden', tab !== 'home');
-        document.getElementById('createSection').classList.toggle('hidden', tab !== 'create');
-        document.getElementById('analyzeSection').classList.toggle('hidden', tab !== 'analyze');
-        document.getElementById('improveSection').classList.toggle('hidden', tab !== 'improve');
+        document.getElementById('phoneNumberSection').classList.add('hidden');
     }
 
-    handleFileUpload(event) {
-        const file = event.target.files[0];
-        if (!file) return;
+    async processPayment() {
+        if (!this.selectedPaymentMethod) {
+            alert('Veuillez sélectionner une méthode de paiement');
+            return;
+        }
 
-        const analyzeBtn = document.getElementById('analyzeBtn');
-        analyzeBtn.disabled = false;
+        const processBtn = document.getElementById('processPayment');
+        const spinner = document.getElementById('paymentSpinner');
+        const btnText = document.getElementById('paymentBtnText');
 
-        // Show file info with clean styling
-        const fileName = file.name;
-        const fileSize = (file.size / 1024).toFixed(2);
-        const fileInfo = document.createElement('div');
-        fileInfo.className = 'mt-4 p-4 bg-green-50 border border-green-200 rounded-xl animate-slide-up';
-        fileInfo.innerHTML = `
-            <div class="flex items-center">
-                <div class="w-12 h-12 bg-green-500 rounded-xl flex items-center justify-center mr-4">
-                    <i class="fas fa-file-alt text-white"></i>
-                </div>
-                <div>
-                    <p class="font-semibold text-green-800">Fichier sélectionné</p>
-                    <p class="text-green-700">${fileName} (${fileSize} KB)</p>
-                </div>
-            </div>
-        `;
-        
-        // Remove previous file info
-        const existingInfo = event.target.closest('.bg-white').querySelector('.file-info');
-        if (existingInfo) existingInfo.remove();
-        
-        fileInfo.classList.add('file-info');
-        event.target.closest('.bg-white').appendChild(fileInfo);
+        // Show loading state
+        processBtn.disabled = true;
+        spinner.classList.remove('hidden');
+        btnText.textContent = 'Traitement...';
 
-        // Read file content for preview
-        this.readFileContent(file, 'analyzedCvPreview');
-    }
+        try {
+            let phoneNumber = null;
+            if (['orange', 'moov'].includes(this.selectedPaymentMethod)) {
+                phoneNumber = document.getElementById('paymentPhone').value;
+                if (!phoneNumber) {
+                    alert('Veuillez saisir votre numéro de téléphone');
+                    return;
+                }
+            }
 
-    handleImproveFileUpload(event) {
-        const file = event.target.files[0];
-        if (!file) return;
+            const result = await this.paymentService.processPayment(
+                this.selectedPaymentMethod, 
+                500, 
+                phoneNumber
+            );
 
-        const improveBtn = document.getElementById('improveBtn');
-        improveBtn.disabled = false;
-
-        // Show file info
-        const fileName = file.name;
-        const fileSize = (file.size / 1024).toFixed(2);
-        const fileInfo = document.createElement('div');
-        fileInfo.className = 'mt-4 p-4 bg-green-50 border border-green-200 rounded-xl animate-slide-up';
-        fileInfo.innerHTML = `
-            <div class="flex items-center">
-                <div class="w-12 h-12 bg-green-500 rounded-xl flex items-center justify-center mr-4">
-                    <i class="fas fa-file-alt text-white"></i>
-                </div>
-                <div>
-                    <p class="font-semibold text-green-800">Fichier sélectionné</p>
-                    <p class="text-green-700">${fileName} (${fileSize} KB)</p>
-                </div>
-            </div>
-        `;
-        
-        // Remove previous file info
-        const existingInfo = event.target.closest('.bg-white').querySelector('.file-info');
-        if (existingInfo) existingInfo.remove();
-        
-        fileInfo.classList.add('file-info');
-        event.target.closest('.bg-white').appendChild(fileInfo);
-
-        // Read file content for preview
-        this.readFileContent(file, 'improveCvPreview');
-    }
-
-    readFileContent(file, previewElementId) {
-        const reader = new FileReader();
-        
-        reader.onload = (e) => {
-            const content = e.target.result;
-            
-            let previewContent = '';
-            if (file.type === 'text/plain') {
-                previewContent = content;
+            if (result.success) {
+                // Save transaction
+                this.paymentService.saveTransaction(result);
+                
+                // Hide modal
+                this.hidePaymentModal();
+                
+                // Show success message
+                alert('Paiement effectué avec succès ! Votre CV va être téléchargé.');
+                
+                // Download CV
+                await this.downloadPDF();
             } else {
-                previewContent = `📄 ${file.name}\n📊 Type: ${file.type}\n📏 Taille: ${(file.size / 1024).toFixed(2)} KB\n\n✨ Fichier prêt pour l'analyse IA`;
+                alert(result.message || 'Erreur lors du paiement');
             }
-
-            // Update preview with clean styling
-            document.getElementById(previewElementId).innerHTML = `
-                <div class="p-8 text-sm text-gray-700 whitespace-pre-wrap max-h-96 overflow-y-auto bg-blue-50 rounded-xl">
-                    <div class="mb-4 p-4 bg-white rounded-lg shadow-sm">
-                        <h4 class="font-bold text-blue-900 mb-2 flex items-center">
-                            <i class="fas fa-file-alt mr-2"></i>
-                            Aperçu du fichier
-                        </h4>
-                        <div class="text-gray-800">${previewContent.substring(0, 2000)}${previewContent.length > 2000 ? '...' : ''}</div>
-                    </div>
-                </div>
-            `;
-        };
-
-        if (file.type === 'text/plain') {
-            reader.readAsText(file);
-        } else {
-            reader.readAsDataURL(file);
-        }
-    }
-
-    async analyzeCV() {
-        const fileInput = document.getElementById('cvFile');
-        const jobDescription = document.getElementById('jobDescription').value;
-        const analyzeBtn = document.getElementById('analyzeBtn');
-        const spinner = document.getElementById('analyzeSpinner');
-        const btnText = document.getElementById('analyzeBtnText');
-
-        if (!fileInput.files[0]) {
-            this.showError('Veuillez sélectionner un fichier CV');
-            return;
-        }
-
-        // Show loading state
-        analyzeBtn.disabled = true;
-        spinner.classList.remove('hidden');
-        btnText.textContent = 'Analyse IA en cours...';
-        analyzeBtn.classList.add('animate-pulse');
-
-        try {
-            // Show progress message
-            this.showInfo('🤖 L\'IA analyse votre CV...');
-            
-            const file = fileInput.files[0];
-            const analysisResult = await this.cvAnalyzer.analyzeCV(file, jobDescription);
-            
-            this.displayAnalysisResults(analysisResult);
-            this.showSuccess('✨ Analyse terminée avec succès !');
-            
         } catch (error) {
-            console.error('Erreur lors de l\'analyse:', error);
-            this.showError('❌ Erreur lors de l\'analyse du CV. Veuillez réessayer.');
+            console.error('Erreur de paiement:', error);
+            alert('Erreur lors du traitement du paiement. Veuillez réessayer.');
         } finally {
             // Reset button state
-            analyzeBtn.disabled = false;
+            processBtn.disabled = false;
             spinner.classList.add('hidden');
-            btnText.textContent = 'Analyser avec l\'IA';
-            analyzeBtn.classList.remove('animate-pulse');
+            btnText.textContent = 'Payer 500 FCFA';
         }
     }
 
-    async improveCV() {
-        const fileInput = document.getElementById('improveCvFile');
-        const targetJob = document.getElementById('targetJobDescription').value;
-        const focusAreas = Array.from(document.querySelectorAll('.improvement-focus:checked')).map(cb => cb.value);
-        const improveBtn = document.getElementById('improveBtn');
-        const spinner = document.getElementById('improveSpinner');
-        const btnText = document.getElementById('improveBtnText');
-
-        if (!fileInput.files[0]) {
-            this.showError('Veuillez sélectionner un fichier CV');
-            return;
-        }
-
-        // Show loading state
-        improveBtn.disabled = true;
-        spinner.classList.remove('hidden');
-        btnText.textContent = 'Génération des améliorations...';
-        improveBtn.classList.add('animate-pulse');
-
-        try {
-            this.showInfo('🚀 Génération des suggestions d\'amélioration...');
-            
-            const file = fileInput.files[0];
-            const improvementResult = await this.cvImprover.improveCV(file, targetJob, focusAreas);
-            
-            this.displayImprovementResults(improvementResult);
-            this.showSuccess('✨ Suggestions générées avec succès !');
-            
-        } catch (error) {
-            console.error('Erreur lors de l\'amélioration:', error);
-            this.showError('❌ Erreur lors de la génération des améliorations. Veuillez réessayer.');
-        } finally {
-            // Reset button state
-            improveBtn.disabled = false;
-            spinner.classList.add('hidden');
-            btnText.textContent = 'Générer les améliorations';
-            improveBtn.classList.remove('animate-pulse');
-        }
-    }
-
-    displayImprovementResults(results) {
-        const resultsSection = document.getElementById('improvementResults');
-        const summaryElement = document.getElementById('improvementSummary');
-        const detailedElement = document.getElementById('detailedImprovements');
-        const comparisonElement = document.getElementById('beforeAfterComparison');
-
-        // Show results section
-        resultsSection.classList.remove('hidden');
-        resultsSection.classList.add('animate-slide-up');
-
-        // Display summary
-        summaryElement.innerHTML = `
-            <div class="text-center p-6 bg-blue-50 rounded-xl">
-                <div class="w-12 h-12 bg-blue-500 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <i class="fas fa-chart-line text-white"></i>
-                </div>
-                <h4 class="font-bold text-blue-900 mb-2">Score d'amélioration</h4>
-                <div class="text-3xl font-bold text-blue-600">${results.improvementScore || 85}%</div>
-                <p class="text-blue-700 text-sm">Potentiel d'amélioration</p>
-            </div>
-            <div class="text-center p-6 bg-green-50 rounded-xl">
-                <div class="w-12 h-12 bg-green-500 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <i class="fas fa-lightbulb text-white"></i>
-                </div>
-                <h4 class="font-bold text-green-900 mb-2">Suggestions</h4>
-                <div class="text-3xl font-bold text-green-600">${results.suggestions?.length || 12}</div>
-                <p class="text-green-700 text-sm">Améliorations proposées</p>
-            </div>
-            <div class="text-center p-6 bg-purple-50 rounded-xl">
-                <div class="w-12 h-12 bg-purple-500 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <i class="fas fa-target text-white"></i>
-                </div>
-                <h4 class="font-bold text-purple-900 mb-2">Impact ATS</h4>
-                <div class="text-3xl font-bold text-purple-600">+${results.atsImprovement || 25}%</div>
-                <p class="text-purple-700 text-sm">Amélioration compatibilité</p>
-            </div>
-        `;
-
-        // Display detailed improvements
-        if (results.suggestions) {
-            detailedElement.innerHTML = results.suggestions.map(suggestion => `
-                <div class="border border-gray-200 rounded-xl p-6 hover:shadow-lg transition-shadow">
-                    <div class="flex items-start justify-between mb-4">
-                        <h4 class="text-lg font-bold text-gray-900">${suggestion.title}</h4>
-                        <span class="px-3 py-1 text-xs font-semibold rounded-full ${this.getPriorityBadge(suggestion.priority)}">
-                            ${suggestion.priority === 'high' ? 'HAUTE' : suggestion.priority === 'medium' ? 'MOYENNE' : 'BASSE'}
-                        </span>
-                    </div>
-                    <p class="text-gray-700 mb-4">${suggestion.description}</p>
-                    ${suggestion.example ? `
-                        <div class="bg-gray-50 rounded-lg p-4">
-                            <h5 class="font-semibold text-gray-800 mb-2">Exemple d'amélioration:</h5>
-                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <div>
-                                    <p class="text-sm text-red-700 font-medium mb-1">❌ Avant:</p>
-                                    <p class="text-sm text-gray-600">${suggestion.example.before}</p>
-                                </div>
-                                <div>
-                                    <p class="text-sm text-green-700 font-medium mb-1">✅ Après:</p>
-                                    <p class="text-sm text-gray-600">${suggestion.example.after}</p>
-                                </div>
-                            </div>
-                        </div>
-                    ` : ''}
-                </div>
-            `).join('');
-        }
-
-        // Display comparison if available
-        if (results.comparison) {
-            comparisonElement.innerHTML = `
-                <div>
-                    <h4 class="font-bold text-gray-900 mb-4 text-center">Version Actuelle</h4>
-                    <div class="bg-red-50 border border-red-200 rounded-xl p-6">
-                        <div class="space-y-3">
-                            ${results.comparison.before.map(item => `
-                                <div class="flex items-center text-red-700">
-                                    <i class="fas fa-times-circle mr-2"></i>
-                                    <span class="text-sm">${item}</span>
-                                </div>
-                            `).join('')}
-                        </div>
-                    </div>
-                </div>
-                <div>
-                    <h4 class="font-bold text-gray-900 mb-4 text-center">Version Améliorée</h4>
-                    <div class="bg-green-50 border border-green-200 rounded-xl p-6">
-                        <div class="space-y-3">
-                            ${results.comparison.after.map(item => `
-                                <div class="flex items-center text-green-700">
-                                    <i class="fas fa-check-circle mr-2"></i>
-                                    <span class="text-sm">${item}</span>
-                                </div>
-                            `).join('')}
-                        </div>
-                    </div>
-                </div>
-            `;
-        }
-    }
-
-    displayAnalysisResults(results) {
-        const resultsSection = document.getElementById('analysisResults');
-        const scoreElement = document.getElementById('overallScore');
-        const scoreCircle = document.getElementById('scoreCircle');
-        const scoreDescription = document.getElementById('scoreDescription');
-        const analysisDetails = document.getElementById('analysisDetails');
-        const recommendations = document.getElementById('recommendations');
-
-        // Show results section with animation
-        resultsSection.classList.remove('hidden');
-        resultsSection.classList.add('animate-slide-up');
-
-        // Animate score
-        const targetScore = results.overallScore;
-        const circumference = 2 * Math.PI * 70; // radius = 70
-        const offset = circumference - (targetScore / 100) * circumference;
-        
-        setTimeout(() => {
-            scoreCircle.style.strokeDashoffset = offset;
-            this.animateNumber(scoreElement, 0, targetScore, 2000);
-        }, 300);
-
-        // Score description with color coding
-        scoreDescription.textContent = this.getScoreDescription(targetScore);
-        scoreDescription.className = `mt-2 text-lg font-medium ${this.getScoreTextColor(targetScore)}`;
-
-        // Clean analysis details
-        analysisDetails.innerHTML = results.details.map(detail => `
-            <div class="analysis-item bg-gray-50 rounded-xl p-6 border-l-4 ${this.getScoreColor(detail.score, 'border')} card-hover">
-                <div class="flex justify-between items-start mb-4">
-                    <h5 class="text-xl font-bold text-gray-900 flex items-center">
-                        <i class="${this.getCategoryIcon(detail.category)} mr-3 ${this.getScoreColor(detail.score, 'text')}"></i>
-                        ${detail.category}
-                    </h5>
-                    <div class="text-right">
-                        <span class="text-2xl font-bold ${this.getScoreColor(detail.score, 'text')}">${detail.score}</span>
-                        <span class="text-gray-500">/100</span>
-                    </div>
-                </div>
-                <p class="text-gray-700 mb-4">${detail.description}</p>
-                
-                ${detail.strengths && detail.strengths.length > 0 ? `
-                    <div class="mb-3">
-                        <h6 class="font-semibold text-green-800 mb-2 flex items-center">
-                            <i class="fas fa-check-circle mr-2"></i>Points forts
-                        </h6>
-                        <ul class="text-sm text-green-700 space-y-1">
-                            ${detail.strengths.map(strength => `<li class="flex items-start"><i class="fas fa-plus text-green-500 mr-2 mt-1"></i>${strength}</li>`).join('')}
-                        </ul>
-                    </div>
-                ` : ''}
-                
-                ${detail.issues && detail.issues.length > 0 ? `
-                    <div class="mb-4">
-                        <h6 class="font-semibold text-orange-800 mb-2 flex items-center">
-                            <i class="fas fa-exclamation-triangle mr-2"></i>À améliorer
-                        </h6>
-                        <ul class="text-sm text-orange-700 space-y-1">
-                            ${detail.issues.map(issue => `<li class="flex items-start"><i class="fas fa-arrow-right text-orange-500 mr-2 mt-1"></i>${issue}</li>`).join('')}
-                        </ul>
-                    </div>
-                ` : ''}
-                
-                <div class="w-full bg-gray-200 rounded-full h-3 overflow-hidden">
-                    <div class="h-3 rounded-full ${this.getScoreColor(detail.score, 'bg')} transition-all duration-1000 ease-out" style="width: ${detail.score}%"></div>
-                </div>
-            </div>
-        `).join('');
-
-        // Clean recommendations
-        recommendations.innerHTML = results.recommendations.map(rec => `
-            <div class="flex items-start space-x-4 p-6 ${this.getPriorityBg(rec.priority)} rounded-xl border-l-4 ${this.getPriorityBorder(rec.priority)} card-hover">
-                <div class="w-12 h-12 ${this.getPriorityIconBg(rec.priority)} rounded-xl flex items-center justify-center flex-shrink-0">
-                    <i class="${this.getPriorityIcon(rec.priority)} text-white"></i>
-                </div>
-                <div class="flex-1">
-                    <div class="flex items-center mb-2">
-                        <h6 class="font-bold ${this.getPriorityTextColor(rec.priority)} text-lg">${rec.title}</h6>
-                        <span class="ml-3 px-3 py-1 text-xs font-semibold ${this.getPriorityBadge(rec.priority)} rounded-full">
-                            ${rec.priority === 'high' ? 'PRIORITÉ HAUTE' : rec.priority === 'medium' ? 'PRIORITÉ MOYENNE' : 'PRIORITÉ BASSE'}
-                        </span>
-                    </div>
-                    <p class="text-gray-700 mb-2">${rec.description}</p>
-                    ${rec.impact ? `
-                        <p class="text-sm text-gray-600 italic flex items-center">
-                            <i class="fas fa-chart-line mr-2"></i>
-                            Impact: ${rec.impact}
-                        </p>
-                    ` : ''}
-                </div>
-            </div>
-        `).join('');
-
-        // Add ATS compatibility and keyword analysis if available
-        if (results.atsCompatibility) {
-            this.displayATSCompatibility(results.atsCompatibility);
-        }
-
-        if (results.keywordAnalysis) {
-            this.displayKeywordAnalysis(results.keywordAnalysis);
-        }
-    }
-
-    getCategoryIcon(category) {
-        const icons = {
-            'Structure et Format': 'fas fa-sitemap',
-            'Mots-clés et Optimisation ATS': 'fas fa-search',
-            'Contenu et Expérience': 'fas fa-file-alt',
-            'Compétences et Qualifications': 'fas fa-cogs',
-            'Impact et Résultats': 'fas fa-chart-line',
-            'Longueur et Format': 'fas fa-ruler',
-            'Compétences Techniques': 'fas fa-code'
-        };
-        return icons[category] || 'fas fa-info-circle';
-    }
-
-    getScoreColor(score, type) {
-        const colors = {
-            high: { border: 'border-green-500', text: 'text-green-600', bg: 'bg-green-500' },
-            medium: { border: 'border-yellow-500', text: 'text-yellow-600', bg: 'bg-yellow-500' },
-            low: { border: 'border-red-500', text: 'text-red-600', bg: 'bg-red-500' }
-        };
-
-        const level = score >= 80 ? 'high' : score >= 60 ? 'medium' : 'low';
-        return colors[level][type];
-    }
-
-    getScoreTextColor(score) {
-        if (score >= 90) return 'text-green-600';
-        if (score >= 80) return 'text-green-500';
-        if (score >= 70) return 'text-yellow-600';
-        if (score >= 60) return 'text-orange-600';
-        return 'text-red-600';
-    }
-
-    getPriorityBg(priority) {
-        const backgrounds = {
-            high: 'bg-red-50',
-            medium: 'bg-yellow-50',
-            low: 'bg-blue-50'
-        };
-        return backgrounds[priority] || backgrounds.medium;
-    }
-
-    getPriorityBorder(priority) {
-        const borders = {
-            high: 'border-red-500',
-            medium: 'border-yellow-500',
-            low: 'border-blue-500'
-        };
-        return borders[priority] || borders.medium;
-    }
-
-    getPriorityIconBg(priority) {
-        const backgrounds = {
-            high: 'bg-red-500',
-            medium: 'bg-yellow-500',
-            low: 'bg-blue-500'
-        };
-        return backgrounds[priority] || backgrounds.medium;
-    }
-
-    getPriorityIcon(priority) {
-        const icons = {
-            high: 'fas fa-exclamation-triangle',
-            medium: 'fas fa-info-circle',
-            low: 'fas fa-lightbulb'
-        };
-        return icons[priority] || icons.medium;
-    }
-
-    getPriorityTextColor(priority) {
-        const colors = {
-            high: 'text-red-800',
-            medium: 'text-yellow-800',
-            low: 'text-blue-800'
-        };
-        return colors[priority] || colors.medium;
-    }
-
-    getPriorityBadge(priority) {
-        const badges = {
-            high: 'bg-red-200 text-red-800',
-            medium: 'bg-yellow-200 text-yellow-800',
-            low: 'bg-blue-200 text-blue-800'
-        };
-        return badges[priority] || badges.medium;
-    }
-
-    getScoreDescription(score) {
-        if (score >= 90) return '🎉 Excellent - Votre CV est parfaitement optimisé pour les ATS';
-        if (score >= 80) return '✅ Très bon - Quelques améliorations mineures possibles';
-        if (score >= 70) return '👍 Bon - Votre CV nécessite quelques optimisations';
-        if (score >= 60) return '⚠️ Moyen - Des améliorations importantes sont recommandées';
-        return '❌ Faible - Votre CV nécessite une refonte majeure pour les ATS';
-    }
-
-    animateNumber(element, start, end, duration) {
-        const startTime = performance.now();
-        
-        const animate = (currentTime) => {
-            const elapsed = currentTime - startTime;
-            const progress = Math.min(elapsed / duration, 1);
-            
-            // Easing function for smooth animation
-            const easeOutQuart = 1 - Math.pow(1 - progress, 4);
-            const current = Math.floor(start + (end - start) * easeOutQuart);
-            element.textContent = current;
-            
-            if (progress < 1) {
-                requestAnimationFrame(animate);
-            }
-        };
-        
-        requestAnimationFrame(animate);
-    }
-
-    bindFormInputs() {
+    setupLivePreview() {
         const inputs = [
             'firstName', 'lastName', 'jobTitle', 'email', 'phone', 
             'address', 'linkedin', 'summary', 'technicalSkills', 
             'softSkills', 'languages'
         ];
 
-        inputs.forEach(id => {
-            const element = document.getElementById(id);
+        inputs.forEach(inputId => {
+            const element = document.getElementById(inputId);
             if (element) {
                 element.addEventListener('input', () => this.updatePreview());
             }
         });
     }
 
-    goToStep(step) {
-        // Validate current step
-        if (step > this.currentStep && !this.validateCurrentStep()) {
-            return;
-        }
-
-        // Hide all steps
-        document.querySelectorAll('.form-section').forEach(section => {
-            section.classList.add('hidden');
-        });
-
-        // Show target step
-        document.getElementById(`step${step}`).classList.remove('hidden');
-
-        // Update step indicators
-        document.querySelectorAll('.step-indicator').forEach((indicator, index) => {
-            const stepNum = index + 1;
-            const circle = indicator.querySelector('div');
-            const text = indicator.querySelector('span');
-
-            if (stepNum <= step) {
-                circle.classList.remove('bg-gray-400');
-                circle.classList.add('bg-blue-600', 'shadow-lg');
-                text.classList.remove('text-gray-500');
-                text.classList.add('text-primary-700');
-                indicator.classList.add('active');
-            } else {
-                circle.classList.remove('bg-blue-600', 'shadow-lg');
-                circle.classList.add('bg-gray-400');
-                text.classList.remove('text-primary-700');
-                text.classList.add('text-gray-500');
-                indicator.classList.remove('active');
+    setupFormValidation() {
+        const requiredFields = ['firstName', 'lastName', 'jobTitle', 'email', 'phone', 'summary'];
+        
+        requiredFields.forEach(fieldId => {
+            const field = document.getElementById(fieldId);
+            if (field) {
+                field.addEventListener('blur', () => this.validateField(field));
             }
         });
+    }
 
+    validateField(field) {
+        const value = field.value.trim();
+        const isValid = value.length > 0;
+        
+        if (isValid) {
+            field.classList.remove('border-red-500');
+            field.classList.add('border-green-500');
+        } else {
+            field.classList.remove('border-green-500');
+            field.classList.add('border-red-500');
+        }
+        
+        return isValid;
+    }
+
+    showSection(section) {
+        // Hide all sections
+        document.querySelectorAll('[id$="Section"]').forEach(sec => {
+            sec.classList.add('hidden');
+        });
+        
+        // Show selected section
+        document.getElementById(section + 'Section').classList.remove('hidden');
+        
+        // Update tab states
+        document.querySelectorAll('.tab-button').forEach(tab => {
+            tab.classList.remove('text-primary-700', 'border-b-2', 'border-primary-500');
+            tab.classList.add('text-gray-600');
+        });
+        
+        const activeTab = document.getElementById(section + 'Tab');
+        activeTab.classList.remove('text-gray-600');
+        activeTab.classList.add('text-primary-700', 'border-b-2', 'border-primary-500');
+    }
+
+    nextStep() {
+        if (this.validateCurrentStep()) {
+            this.collectFormData();
+            this.currentStep++;
+            this.updateStepIndicators();
+            this.showStep(this.currentStep);
+        }
+    }
+
+    previousStep() {
+        this.currentStep--;
+        this.updateStepIndicators();
+        this.showStep(this.currentStep);
+    }
+
+    goToStep(step) {
         this.currentStep = step;
-        this.updatePreview();
+        this.updateStepIndicators();
+        this.showStep(this.currentStep);
     }
 
     validateCurrentStep() {
         if (this.currentStep === 1) {
-            const required = ['firstName', 'lastName', 'jobTitle', 'email', 'phone', 'summary'];
-            for (let field of required) {
-                const element = document.getElementById(field);
-                if (!element.value.trim()) {
-                    element.focus();
-                    element.classList.add('border-red-500', 'ring-2', 'ring-red-200');
-                    this.showError(`Le champ ${this.getFieldLabel(field)} est requis`);
-                    
-                    // Remove error styling after 3 seconds
-                    setTimeout(() => {
-                        element.classList.remove('border-red-500', 'ring-2', 'ring-red-200');
-                    }, 3000);
-                    
-                    return false;
+            const requiredFields = ['firstName', 'lastName', 'jobTitle', 'email', 'phone', 'summary'];
+            let isValid = true;
+            
+            requiredFields.forEach(fieldId => {
+                const field = document.getElementById(fieldId);
+                if (!this.validateField(field)) {
+                    isValid = false;
                 }
+            });
+            
+            if (!isValid) {
+                alert('Veuillez remplir tous les champs obligatoires');
             }
+            
+            return isValid;
         }
+        
         return true;
     }
 
-    getFieldLabel(field) {
-        const labels = {
-            firstName: 'Prénom',
-            lastName: 'Nom',
-            jobTitle: 'Titre professionnel',
-            email: 'Email',
-            phone: 'Téléphone',
-            summary: 'Résumé professionnel'
-        };
-        return labels[field] || field;
+    updateStepIndicators() {
+        for (let i = 1; i <= 3; i++) {
+            const indicator = document.querySelector(`.step-indicator:nth-child(${i * 2 - 1}) .w-10`);
+            const label = document.querySelector(`.step-indicator:nth-child(${i * 2 - 1}) span`);
+            
+            if (i <= this.currentStep) {
+                indicator.classList.remove('bg-gray-400', 'text-gray-300');
+                indicator.classList.add('bg-blue-600', 'text-white');
+                label.classList.remove('text-gray-500');
+                label.classList.add('text-primary-700', 'font-medium');
+            } else {
+                indicator.classList.remove('bg-blue-600', 'text-white');
+                indicator.classList.add('bg-gray-400', 'text-gray-300');
+                label.classList.remove('text-primary-700', 'font-medium');
+                label.classList.add('text-gray-500');
+            }
+        }
     }
 
-    selectTemplate(template) {
-        this.selectedTemplate = template;
-        
-        // Update visual selection
-        document.querySelectorAll('.template-option').forEach(option => {
-            option.classList.remove('border-blue-500', 'bg-blue-50', 'shadow-xl', 'scale-105');
-            option.classList.add('border-gray-200');
+    showStep(step) {
+        document.querySelectorAll('.form-section').forEach(section => {
+            section.classList.add('hidden');
         });
-
-        const selectedOption = document.querySelector(`[data-template="${template}"]`);
-        selectedOption.classList.remove('border-gray-200');
-        selectedOption.classList.add('border-blue-500', 'bg-blue-50', 'shadow-xl', 'scale-105');
-
-        this.updatePreview();
-    }
-
-    addExperience() {
-        const container = document.getElementById('experienceContainer');
-        const index = container.children.length;
         
-        const experienceHTML = `
-            <div class="experience-item bg-blue-50 border border-blue-200 rounded-xl p-6 card-hover animate-slide-up">
-                <div class="flex justify-between items-start mb-6">
-                    <h4 class="text-xl font-bold text-gray-900 flex items-center">
-                        <i class="fas fa-briefcase mr-3 text-blue-500"></i>
-                        Expérience ${index + 1}
-                    </h4>
-                    <button class="remove-experience w-10 h-10 bg-red-500 hover:bg-red-600 text-white rounded-xl transition-all duration-300 flex items-center justify-center shadow-lg hover:shadow-xl">
-                        <i class="fas fa-times"></i>
-                    </button>
-                </div>
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-                    <div class="form-group">
-                        <label class="block text-sm font-semibold text-gray-700 mb-2">Poste</label>
-                        <input type="text" class="exp-position w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all duration-300">
-                    </div>
-                    <div class="form-group">
-                        <label class="block text-sm font-semibold text-gray-700 mb-2">Entreprise</label>
-                        <input type="text" class="exp-company w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all duration-300">
-                    </div>
-                </div>
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-                    <div class="form-group">
-                        <label class="block text-sm font-semibold text-gray-700 mb-2">Date de début</label>
-                        <input type="text" class="exp-start-date w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all duration-300" placeholder="MM/YYYY">
-                    </div>
-                    <div class="form-group">
-                        <label class="block text-sm font-semibold text-gray-700 mb-2">Date de fin</label>
-                        <input type="text" class="exp-end-date w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all duration-300" placeholder="MM/YYYY ou Présent">
-                    </div>
-                </div>
-                <div class="form-group">
-                    <label class="block text-sm font-semibold text-gray-700 mb-2">Description</label>
-                    <textarea class="exp-description w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all duration-300 resize-none" rows="4" placeholder="Décrivez vos responsabilités et réalisations avec des chiffres..."></textarea>
-                </div>
-            </div>
-        `;
-
-        container.insertAdjacentHTML('beforeend', experienceHTML);
-        
-        // Bind events for new item
-        const newItem = container.lastElementChild;
-        newItem.querySelector('.remove-experience').addEventListener('click', () => {
-            newItem.style.transform = 'translateX(-100%)';
-            newItem.style.opacity = '0';
-            setTimeout(() => {
-                newItem.remove();
-                this.updatePreview();
-            }, 300);
-        });
-
-        // Bind input events
-        newItem.querySelectorAll('input, textarea').forEach(input => {
-            input.addEventListener('input', () => this.updatePreview());
-        });
-    }
-
-    addEducation() {
-        const container = document.getElementById('educationContainer');
-        const index = container.children.length;
-        
-        const educationHTML = `
-            <div class="education-item bg-green-50 border border-green-200 rounded-xl p-6 card-hover animate-slide-up">
-                <div class="flex justify-between items-start mb-6">
-                    <h4 class="text-xl font-bold text-gray-900 flex items-center">
-                        <i class="fas fa-graduation-cap mr-3 text-green-500"></i>
-                        Formation ${index + 1}
-                    </h4>
-                    <button class="remove-education w-10 h-10 bg-red-500 hover:bg-red-600 text-white rounded-xl transition-all duration-300 flex items-center justify-center shadow-lg hover:shadow-xl">
-                        <i class="fas fa-times"></i>
-                    </button>
-                </div>
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-                    <div class="form-group">
-                        <label class="block text-sm font-semibold text-gray-700 mb-2">Diplôme</label>
-                        <input type="text" class="edu-degree w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-green-500 focus:ring-2 focus:ring-green-200 transition-all duration-300">
-                    </div>
-                    <div class="form-group">
-                        <label class="block text-sm font-semibold text-gray-700 mb-2">Établissement</label>
-                        <input type="text" class="edu-institution w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-green-500 focus:ring-2 focus:ring-green-200 transition-all duration-300">
-                    </div>
-                </div>
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div class="form-group">
-                        <label class="block text-sm font-semibold text-gray-700 mb-2">Année</label>
-                        <input type="text" class="edu-year w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-green-500 focus:ring-2 focus:ring-green-200 transition-all duration-300" placeholder="YYYY">
-                    </div>
-                    <div class="form-group">
-                        <label class="block text-sm font-semibold text-gray-700 mb-2">Lieu</label>
-                        <input type="text" class="edu-location w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-green-500 focus:ring-2 focus:ring-green-200 transition-all duration-300">
-                    </div>
-                </div>
-            </div>
-        `;
-
-        container.insertAdjacentHTML('beforeend', educationHTML);
-        
-        // Bind events for new item
-        const newItem = container.lastElementChild;
-        newItem.querySelector('.remove-education').addEventListener('click', () => {
-            newItem.style.transform = 'translateX(-100%)';
-            newItem.style.opacity = '0';
-            setTimeout(() => {
-                newItem.remove();
-                this.updatePreview();
-            }, 300);
-        });
-
-        // Bind input events
-        newItem.querySelectorAll('input').forEach(input => {
-            input.addEventListener('input', () => this.updatePreview());
-        });
-    }
-
-    addDefaultExperience() {
-        this.addExperience();
-    }
-
-    addDefaultEducation() {
-        this.addEducation();
+        document.getElementById(`step${step}`).classList.remove('hidden');
     }
 
     collectFormData() {
@@ -848,35 +347,6 @@ class CVApp {
             summary: document.getElementById('summary').value
         };
 
-        // Experience
-        this.cvData.experience = [];
-        document.querySelectorAll('.experience-item').forEach(item => {
-            const exp = {
-                position: item.querySelector('.exp-position').value,
-                company: item.querySelector('.exp-company').value,
-                startDate: item.querySelector('.exp-start-date').value,
-                endDate: item.querySelector('.exp-end-date').value,
-                description: item.querySelector('.exp-description').value
-            };
-            if (exp.position || exp.company) {
-                this.cvData.experience.push(exp);
-            }
-        });
-
-        // Education
-        this.cvData.education = [];
-        document.querySelectorAll('.education-item').forEach(item => {
-            const edu = {
-                degree: item.querySelector('.edu-degree').value,
-                institution: item.querySelector('.edu-institution').value,
-                year: item.querySelector('.edu-year').value,
-                location: item.querySelector('.edu-location').value
-            };
-            if (edu.degree || edu.institution) {
-                this.cvData.education.push(edu);
-            }
-        });
-
         // Skills
         this.cvData.skills = {
             technical: document.getElementById('technicalSkills').value,
@@ -885,324 +355,532 @@ class CVApp {
 
         // Languages
         this.cvData.languages = document.getElementById('languages').value;
+
+        // Experiences
+        this.cvData.experiences = [];
+        document.querySelectorAll('.experience-item').forEach(item => {
+            const exp = {
+                position: item.querySelector('.exp-position').value,
+                company: item.querySelector('.exp-company').value,
+                startDate: item.querySelector('.exp-start').value,
+                endDate: item.querySelector('.exp-end').value,
+                description: item.querySelector('.exp-description').value
+            };
+            this.cvData.experiences.push(exp);
+        });
+
+        // Education
+        this.cvData.education = [];
+        document.querySelectorAll('.education-item').forEach(item => {
+            const edu = {
+                degree: item.querySelector('.edu-degree').value,
+                school: item.querySelector('.edu-school').value,
+                year: item.querySelector('.edu-year').value
+            };
+            this.cvData.education.push(edu);
+        });
     }
 
-    updatePreview() {
-        if (this.currentTab !== 'create') return;
+    addExperience() {
+        this.experienceCount++;
+        const container = document.getElementById('experienceContainer');
+        const experienceHTML = `
+            <div class="experience-item bg-gray-50 p-4 rounded-lg border">
+                <div class="flex justify-between items-center mb-4">
+                    <h4 class="font-semibold text-gray-800">Expérience ${this.experienceCount}</h4>
+                    <button type="button" class="text-red-600 hover:text-red-800" onclick="this.parentElement.parentElement.remove()">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                    <input type="text" class="exp-position px-3 py-2 border rounded-lg" placeholder="Poste">
+                    <input type="text" class="exp-company px-3 py-2 border rounded-lg" placeholder="Entreprise">
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                    <input type="text" class="exp-start px-3 py-2 border rounded-lg" placeholder="Date de début">
+                    <input type="text" class="exp-end px-3 py-2 border rounded-lg" placeholder="Date de fin">
+                </div>
+                <textarea class="exp-description w-full px-3 py-2 border rounded-lg resize-none" rows="3" placeholder="Description des responsabilités et réalisations"></textarea>
+            </div>
+        `;
+        container.insertAdjacentHTML('beforeend', experienceHTML);
+    }
+
+    addEducation() {
+        this.educationCount++;
+        const container = document.getElementById('educationContainer');
+        const educationHTML = `
+            <div class="education-item bg-gray-50 p-4 rounded-lg border">
+                <div class="flex justify-between items-center mb-4">
+                    <h4 class="font-semibold text-gray-800">Formation ${this.educationCount}</h4>
+                    <button type="button" class="text-red-600 hover:text-red-800" onclick="this.parentElement.parentElement.remove()">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                    <input type="text" class="edu-degree px-3 py-2 border rounded-lg" placeholder="Diplôme">
+                    <input type="text" class="edu-year px-3 py-2 border rounded-lg" placeholder="Année">
+                </div>
+                <input type="text" class="edu-school w-full px-3 py-2 border rounded-lg" placeholder="École/Université">
+            </div>
+        `;
+        container.insertAdjacentHTML('beforeend', educationHTML);
+    }
+
+    selectTemplate(templateName) {
+        this.selectedTemplate = templateName;
         
-        this.collectFormData();
-        const html = this.cvGenerator.generateHTML(this.cvData, this.selectedTemplate);
-        document.getElementById('cvPreview').innerHTML = html;
+        // Update visual selection
+        document.querySelectorAll('.template-option').forEach(option => {
+            option.classList.remove('selected');
+        });
+        
+        document.querySelector(`[data-template="${templateName}"]`).classList.add('selected');
     }
 
     generateCV() {
         this.collectFormData();
-        this.updatePreview();
-        // Copy preview to final preview
-        document.getElementById('cvPreviewFinal').innerHTML = document.getElementById('cvPreview').innerHTML;
-        this.goToStep(3);
+        const cvHTML = this.cvGenerator.generateHTML(this.cvData, this.selectedTemplate);
+        document.getElementById('cvPreviewFinal').innerHTML = cvHTML;
+        this.nextStep();
+    }
+
+    updatePreview() {
+        this.collectFormData();
+        const cvHTML = this.cvGenerator.generateHTML(this.cvData, this.selectedTemplate);
+        document.getElementById('cvPreview').innerHTML = cvHTML;
+    }
+
+    zoomIn(previewId = 'cvPreview') {
+        this.zoomLevel = Math.min(this.zoomLevel + 0.1, 1.5);
+        this.applyZoom(previewId);
+    }
+
+    zoomOut(previewId = 'cvPreview') {
+        this.zoomLevel = Math.max(this.zoomLevel - 0.1, 0.3);
+        this.applyZoom(previewId);
+    }
+
+    applyZoom(previewId) {
+        const preview = document.getElementById(previewId);
+        const scale = this.zoomLevel;
+        const inverseScale = 1 / scale;
+        
+        preview.style.transform = `scale(${scale})`;
+        preview.style.transformOrigin = 'top left';
+        preview.style.width = `${inverseScale * 100}%`;
+        preview.style.height = `${inverseScale * 100}%`;
     }
 
     async downloadPDF() {
-        const { jsPDF } = window.jspdf;
-        const cvElement = document.getElementById('cvPreviewFinal');
-        
         try {
-            this.showInfo('📄 Génération du PDF en cours...');
-            
-            const canvas = await html2canvas(cvElement, {
+            const element = document.getElementById('cvPreviewFinal');
+            const canvas = await html2canvas(element, {
                 scale: 2,
                 useCORS: true,
-                allowTaint: true,
-                backgroundColor: '#ffffff'
+                allowTaint: true
             });
             
             const imgData = canvas.toDataURL('image/png');
-            const pdf = new jsPDF({
-                orientation: 'portrait',
-                unit: 'mm',
-                format: 'a4'
-            });
-            
+            const pdf = new jsPDF('p', 'mm', 'a4');
             const imgWidth = 210;
             const pageHeight = 295;
             const imgHeight = (canvas.height * imgWidth) / canvas.width;
             let heightLeft = imgHeight;
             let position = 0;
-            
+
             pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
             heightLeft -= pageHeight;
-            
+
             while (heightLeft >= 0) {
                 position = heightLeft - imgHeight;
                 pdf.addPage();
                 pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
                 heightLeft -= pageHeight;
             }
-            
+
             const fileName = `CV_${this.cvData.personal.firstName}_${this.cvData.personal.lastName}.pdf`;
             pdf.save(fileName);
-            
-            this.showSuccess('✅ PDF téléchargé avec succès !');
         } catch (error) {
             console.error('Erreur lors de la génération du PDF:', error);
-            this.showError('❌ Erreur lors de la génération du PDF');
+            alert('Erreur lors de la génération du PDF');
         }
     }
 
     printCV() {
-        window.print();
+        const printWindow = window.open('', '_blank');
+        const cvContent = document.getElementById('cvPreviewFinal').innerHTML;
+        
+        printWindow.document.write(`
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <title>CV - ${this.cvData.personal.firstName} ${this.cvData.personal.lastName}</title>
+                <script src="https://cdn.tailwindcss.com"></script>
+                <style>
+                    @media print {
+                        body { margin: 0; }
+                        .no-print { display: none; }
+                    }
+                </style>
+            </head>
+            <body>
+                ${cvContent}
+            </body>
+            </html>
+        `);
+        
+        printWindow.document.close();
+        printWindow.focus();
+        
+        setTimeout(() => {
+            printWindow.print();
+            printWindow.close();
+        }, 250);
     }
 
-    saveToStorage() {
-        const data = {
-            cvData: this.cvData,
-            selectedTemplate: this.selectedTemplate
+    saveCV() {
+        const cvDataToSave = {
+            ...this.cvData,
+            template: this.selectedTemplate,
+            timestamp: new Date().toISOString()
         };
-        localStorage.setItem('cvGenerator_data', JSON.stringify(data));
-        this.showSuccess('💾 Données sauvegardées avec succès');
+        
+        localStorage.setItem('mycv_data', JSON.stringify(cvDataToSave));
+        alert('CV sauvegardé avec succès !');
     }
 
-    loadFromStorage() {
-        const saved = localStorage.getItem('cvGenerator_data');
-        if (saved) {
-            try {
-                const data = JSON.parse(saved);
-                this.cvData = data.cvData || this.cvData;
-                this.selectedTemplate = data.selectedTemplate || this.selectedTemplate;
-                this.fillFormFromData();
-                this.showSuccess('📂 Données chargées avec succès');
-            } catch (error) {
-                this.showError('❌ Erreur lors du chargement des données');
-            }
+    loadCV() {
+        const savedData = localStorage.getItem('mycv_data');
+        if (savedData) {
+            const data = JSON.parse(savedData);
+            this.cvData = data;
+            this.selectedTemplate = data.template || 'modern';
+            this.populateForm();
+            alert('CV chargé avec succès !');
         } else {
-            this.showInfo('ℹ️ Aucune donnée sauvegardée trouvée');
+            alert('Aucun CV sauvegardé trouvé');
         }
     }
 
-    fillFormFromData() {
-        // Fill personal information
+    loadSavedData() {
+        const savedData = localStorage.getItem('mycv_data');
+        if (savedData) {
+            const data = JSON.parse(savedData);
+            this.cvData = data;
+            this.selectedTemplate = data.template || 'modern';
+        }
+    }
+
+    populateForm() {
+        // Populate personal information
         Object.keys(this.cvData.personal).forEach(key => {
             const element = document.getElementById(key);
-            if (element && this.cvData.personal[key]) {
-                element.value = this.cvData.personal[key];
+            if (element) {
+                element.value = this.cvData.personal[key] || '';
             }
         });
 
-        // Fill skills
-        if (this.cvData.skills.technical) {
-            document.getElementById('technicalSkills').value = this.cvData.skills.technical;
-        }
-        if (this.cvData.skills.soft) {
-            document.getElementById('softSkills').value = this.cvData.skills.soft;
+        // Populate skills
+        if (this.cvData.skills) {
+            document.getElementById('technicalSkills').value = this.cvData.skills.technical || '';
+            document.getElementById('softSkills').value = this.cvData.skills.soft || '';
         }
 
-        // Fill languages
-        if (this.cvData.languages) {
-            document.getElementById('languages').value = this.cvData.languages;
-        }
+        // Populate languages
+        document.getElementById('languages').value = this.cvData.languages || '';
 
-        // Update template selection
-        this.selectTemplate(this.selectedTemplate);
+        // Populate experiences
+        this.cvData.experiences.forEach(() => {
+            this.addExperience();
+        });
+
+        // Populate education
+        this.cvData.education.forEach(() => {
+            this.addEducation();
+        });
+
         this.updatePreview();
     }
 
     resetForm() {
         this.cvData = {
             personal: {},
-            experience: [],
+            experiences: [],
             education: [],
             skills: {},
             languages: ''
         };
+        this.currentStep = 1;
+        this.experienceCount = 0;
+        this.educationCount = 0;
         
+        // Clear form
         document.querySelectorAll('input, textarea').forEach(input => {
             input.value = '';
         });
         
+        // Clear dynamic sections
         document.getElementById('experienceContainer').innerHTML = '';
         document.getElementById('educationContainer').innerHTML = '';
         
-        this.addDefaultExperience();
-        this.addDefaultEducation();
-        
-        this.goToStep(1);
+        this.updateStepIndicators();
+        this.showStep(1);
         this.updatePreview();
+    }
+
+    async handleFileUpload(event, section) {
+        const file = event.target.files[0];
+        if (!file) return;
+
+        const previewId = section === 'analyze' ? 'analyzedCvPreview' : 'improveCvPreview';
+        const btnId = section === 'analyze' ? 'analyzeBtn' : 'improveBtn';
         
-        this.showSuccess('🔄 Formulaire réinitialisé');
-    }
-
-    zoomPreview(factor) {
-        const preview = document.getElementById('cvPreview');
-        const currentScale = parseFloat(preview.style.transform.match(/scale\((.*?)\)/)?.[1] || '0.75');
-        const newScale = Math.max(0.5, Math.min(1.2, currentScale * factor));
-        preview.style.transform = `scale(${newScale})`;
-    }
-
-    zoomPreviewFinal(factor) {
-        const preview = document.getElementById('cvPreviewFinal');
-        const currentScale = parseFloat(preview.style.transform.match(/scale\((.*?)\)/)?.[1] || '0.75');
-        const newScale = Math.max(0.5, Math.min(1.2, currentScale * factor));
-        preview.style.transform = `scale(${newScale})`;
-    }
-
-    showError(message) {
-        this.showNotification(message, 'error');
-    }
-
-    showSuccess(message) {
-        this.showNotification(message, 'success');
-    }
-
-    showInfo(message) {
-        this.showNotification(message, 'info');
-    }
-
-    showNotification(message, type) {
-        const notification = document.createElement('div');
-        const colors = {
-            error: 'bg-red-500 border-red-400',
-            success: 'bg-green-500 border-green-400',
-            info: 'bg-blue-500 border-blue-400'
-        };
-        
-        notification.className = `fixed top-6 right-6 ${colors[type]} text-white px-6 py-4 rounded-xl shadow-2xl z-50 border animate-slide-up max-w-md`;
-        notification.innerHTML = `
-            <div class="flex items-center">
-                <div class="mr-3">
-                    ${type === 'error' ? '<i class="fas fa-exclamation-circle"></i>' : 
-                      type === 'success' ? '<i class="fas fa-check-circle"></i>' : 
-                      '<i class="fas fa-info-circle"></i>'}
-                </div>
-                <div class="flex-1">${message}</div>
-                <button class="ml-3 text-white/80 hover:text-white" onclick="this.parentElement.parentElement.remove()">
-                    <i class="fas fa-times"></i>
-                </button>
+        // Show file info
+        document.getElementById(previewId).innerHTML = `
+            <div class="text-center">
+                <i class="fas fa-file-alt text-4xl text-blue-600 mb-4"></i>
+                <h4 class="font-semibold text-gray-800">${file.name}</h4>
+                <p class="text-sm text-gray-600">Taille: ${(file.size / 1024).toFixed(1)} KB</p>
+                <p class="text-sm text-gray-600">Type: ${file.type || 'Non spécifié'}</p>
             </div>
         `;
         
-        document.body.appendChild(notification);
-        
-        setTimeout(() => {
-            if (notification.parentNode) {
-                notification.style.transform = 'translateX(100%)';
-                notification.style.opacity = '0';
-                setTimeout(() => notification.remove(), 300);
-            }
-        }, 5000);
+        // Enable analyze/improve button
+        document.getElementById(btnId).disabled = false;
     }
 
-    displayATSCompatibility(atsData) {
-        const container = document.createElement('div');
-        container.className = 'mt-8';
-        container.innerHTML = `
-            <h4 class="text-xl font-bold text-gray-900 mb-6 flex items-center">
-                <i class="fas fa-robot mr-3 text-purple-500"></i>
-                Compatibilité ATS
-            </h4>
-            <div class="bg-purple-50 rounded-xl p-6 border-l-4 border-purple-500 card-hover">
-                <div class="flex justify-between items-center mb-4">
-                    <h5 class="text-lg font-semibold text-purple-900">Score de compatibilité</h5>
-                    <div class="text-right">
-                        <span class="text-2xl font-bold text-purple-700">${atsData.score}</span>
-                        <span class="text-gray-500">/100</span>
-                    </div>
+    async analyzeCV() {
+        const fileInput = document.getElementById('cvFile');
+        const jobDescription = document.getElementById('jobDescription').value;
+        
+        if (!fileInput.files[0]) {
+            alert('Veuillez sélectionner un fichier CV');
+            return;
+        }
+
+        const analyzeBtn = document.getElementById('analyzeBtn');
+        const spinner = document.getElementById('analyzeSpinner');
+        const btnText = document.getElementById('analyzeBtnText');
+
+        // Show loading state
+        analyzeBtn.disabled = true;
+        spinner.classList.remove('hidden');
+        btnText.textContent = 'Analyse en cours...';
+
+        try {
+            const analysis = await this.cvAnalyzer.analyzeCV(fileInput.files[0], jobDescription);
+            this.displayAnalysisResults(analysis);
+        } catch (error) {
+            console.error('Erreur lors de l\'analyse:', error);
+            alert('Erreur lors de l\'analyse du CV');
+        } finally {
+            // Reset button state
+            analyzeBtn.disabled = false;
+            spinner.classList.add('hidden');
+            btnText.textContent = 'Analyser avec l\'IA';
+        }
+    }
+
+    displayAnalysisResults(analysis) {
+        // Show results section
+        document.getElementById('analysisResults').classList.remove('hidden');
+
+        // Update overall score
+        document.getElementById('overallScore').textContent = analysis.overallScore;
+        
+        // Animate score circle
+        const circle = document.getElementById('scoreCircle');
+        const circumference = 2 * Math.PI * 70;
+        const offset = circumference - (analysis.overallScore / 100) * circumference;
+        circle.style.strokeDashoffset = offset;
+
+        // Score description
+        let scoreDescription = '';
+        if (analysis.overallScore >= 80) {
+            scoreDescription = 'Excellent CV ! Très bien optimisé pour les ATS.';
+        } else if (analysis.overallScore >= 60) {
+            scoreDescription = 'Bon CV avec quelques améliorations possibles.';
+        } else if (analysis.overallScore >= 40) {
+            scoreDescription = 'CV correct mais nécessite des améliorations.';
+        } else {
+            scoreDescription = 'CV à améliorer significativement.';
+        }
+        document.getElementById('scoreDescription').textContent = scoreDescription;
+
+        // Display detailed analysis
+        const detailsContainer = document.getElementById('analysisDetails');
+        detailsContainer.innerHTML = analysis.details.map(detail => `
+            <div class="border rounded-lg p-4">
+                <div class="flex justify-between items-center mb-3">
+                    <h4 class="font-semibold text-gray-800">${detail.category}</h4>
+                    <span class="px-3 py-1 rounded-full text-sm font-medium ${
+                        detail.score >= 80 ? 'bg-green-100 text-green-800' :
+                        detail.score >= 60 ? 'bg-yellow-100 text-yellow-800' :
+                        'bg-red-100 text-red-800'
+                    }">${detail.score}/100</span>
                 </div>
-                
-                ${atsData.issues.length > 0 ? `
-                    <div class="mb-4">
-                        <h6 class="font-semibold text-purple-800 mb-2 flex items-center">
-                            <i class="fas fa-exclamation-circle mr-2"></i>Problèmes détectés
-                        </h6>
-                        <ul class="text-sm text-purple-700 space-y-1">
-                            ${atsData.issues.map(issue => `
-                                <li class="flex items-start">
-                                    <i class="fas fa-times-circle text-purple-500 mr-2 mt-1"></i>${issue}
-                                </li>
-                            `).join('')}
+                <p class="text-gray-600 mb-3">${detail.description}</p>
+                ${detail.strengths.length > 0 ? `
+                    <div class="mb-3">
+                        <h5 class="font-medium text-green-700 mb-2">Points forts:</h5>
+                        <ul class="list-disc list-inside text-sm text-green-600">
+                            ${detail.strengths.map(strength => `<li>${strength}</li>`).join('')}
                         </ul>
                     </div>
                 ` : ''}
-                
-                ${atsData.recommendations.length > 0 ? `
+                ${detail.issues.length > 0 ? `
                     <div>
-                        <h6 class="font-semibold text-purple-800 mb-2 flex items-center">
-                            <i class="fas fa-lightbulb mr-2"></i>Recommandations
-                        </h6>
-                        <ul class="text-sm text-purple-700 space-y-1">
-                            ${atsData.recommendations.map(rec => `
-                                <li class="flex items-start">
-                                    <i class="fas fa-arrow-right text-purple-500 mr-2 mt-1"></i>${rec}
-                                </li>
-                            `).join('')}
+                        <h5 class="font-medium text-red-700 mb-2">À améliorer:</h5>
+                        <ul class="list-disc list-inside text-sm text-red-600">
+                            ${detail.issues.map(issue => `<li>${issue}</li>`).join('')}
                         </ul>
                     </div>
                 ` : ''}
             </div>
-        `;
+        `).join('');
 
-        document.getElementById('analysisDetails').appendChild(container);
+        // Display recommendations
+        const recommendationsContainer = document.getElementById('recommendations');
+        recommendationsContainer.innerHTML = analysis.recommendations.map(rec => `
+            <div class="border-l-4 ${
+                rec.priority === 'high' ? 'border-red-500 bg-red-50' :
+                rec.priority === 'medium' ? 'border-yellow-500 bg-yellow-50' :
+                'border-blue-500 bg-blue-50'
+            } p-4 rounded-r-lg">
+                <div class="flex items-center mb-2">
+                    <span class="px-2 py-1 rounded text-xs font-medium ${
+                        rec.priority === 'high' ? 'bg-red-200 text-red-800' :
+                        rec.priority === 'medium' ? 'bg-yellow-200 text-yellow-800' :
+                        'bg-blue-200 text-blue-800'
+                    }">${rec.priority.toUpperCase()}</span>
+                    <h4 class="font-semibold text-gray-800 ml-3">${rec.title}</h4>
+                </div>
+                <p class="text-gray-700 mb-2">${rec.description}</p>
+                <p class="text-sm text-gray-600 italic">${rec.impact}</p>
+            </div>
+        `).join('');
     }
 
-    displayKeywordAnalysis(keywordData) {
-        const container = document.createElement('div');
-        container.className = 'mt-8';
-        container.innerHTML = `
-            <h4 class="text-xl font-bold text-gray-900 mb-6 flex items-center">
-                <i class="fas fa-tags mr-3 text-blue-500"></i>
-                Analyse des mots-clés
-            </h4>
-            <div class="bg-blue-50 rounded-xl p-6 border-l-4 border-blue-500 card-hover">
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div>
-                        <h6 class="font-semibold text-blue-800 mb-3 flex items-center">
-                            <i class="fas fa-check-circle mr-2"></i>Mots-clés présents
-                        </h6>
-                        <div class="flex flex-wrap gap-2">
-                            ${keywordData.matchedKeywords.map(keyword => `
-                                <span class="px-3 py-1 bg-blue-200 text-blue-800 rounded-full text-sm">
-                                    ${keyword}
-                                </span>
-                            `).join('')}
+    async improveCV() {
+        const fileInput = document.getElementById('improveCvFile');
+        const targetJob = document.getElementById('targetJobDescription').value;
+        const focusAreas = Array.from(document.querySelectorAll('.improvement-focus:checked')).map(cb => cb.value);
+        
+        if (!fileInput.files[0]) {
+            alert('Veuillez sélectionner un fichier CV');
+            return;
+        }
+
+        const improveBtn = document.getElementById('improveBtn');
+        const spinner = document.getElementById('improveSpinner');
+        const btnText = document.getElementById('improveBtnText');
+
+        // Show loading state
+        improveBtn.disabled = true;
+        spinner.classList.remove('hidden');
+        btnText.textContent = 'Génération en cours...';
+
+        try {
+            const improvements = await this.cvImprover.improveCV(fileInput.files[0], targetJob, focusAreas);
+            this.displayImprovementResults(improvements);
+        } catch (error) {
+            console.error('Erreur lors de l\'amélioration:', error);
+            alert('Erreur lors de l\'amélioration du CV');
+        } finally {
+            // Reset button state
+            improveBtn.disabled = false;
+            spinner.classList.add('hidden');
+            btnText.textContent = 'Générer les améliorations';
+        }
+    }
+
+    displayImprovementResults(improvements) {
+        // Show results section
+        document.getElementById('improvementResults').classList.remove('hidden');
+
+        // Display improvement summary
+        const summaryContainer = document.getElementById('improvementSummary');
+        summaryContainer.innerHTML = `
+            <div class="text-center p-6 bg-blue-50 rounded-lg">
+                <div class="text-3xl font-bold text-blue-600 mb-2">${improvements.suggestions?.length || 0}</div>
+                <div class="text-sm text-blue-800">Suggestions d'amélioration</div>
+            </div>
+            <div class="text-center p-6 bg-green-50 rounded-lg">
+                <div class="text-3xl font-bold text-green-600 mb-2">${improvements.atsImprovement || 0}%</div>
+                <div class="text-sm text-green-800">Amélioration ATS potentielle</div>
+            </div>
+            <div class="text-center p-6 bg-purple-50 rounded-lg">
+                <div class="text-3xl font-bold text-purple-600 mb-2">${improvements.improvementScore || 0}%</div>
+                <div class="text-sm text-purple-800">Score d'amélioration</div>
+            </div>
+        `;
+
+        // Display detailed improvements
+        const detailedContainer = document.getElementById('detailedImprovements');
+        if (improvements.suggestions) {
+            detailedContainer.innerHTML = improvements.suggestions.map(suggestion => `
+                <div class="border rounded-lg p-6">
+                    <div class="flex items-center justify-between mb-4">
+                        <h4 class="text-lg font-semibold text-gray-800">${suggestion.title}</h4>
+                        <span class="px-3 py-1 rounded-full text-sm font-medium ${
+                            suggestion.priority === 'high' ? 'bg-red-100 text-red-800' :
+                            suggestion.priority === 'medium' ? 'bg-yellow-100 text-yellow-800' :
+                            'bg-blue-100 text-blue-800'
+                        }">${suggestion.priority}</span>
+                    </div>
+                    <p class="text-gray-700 mb-4">${suggestion.description}</p>
+                    ${suggestion.example ? `
+                        <div class="bg-gray-50 rounded-lg p-4">
+                            <h5 class="font-medium text-gray-800 mb-3">Exemple d'amélioration:</h5>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div>
+                                    <h6 class="text-sm font-medium text-red-700 mb-2">Avant:</h6>
+                                    <p class="text-sm text-gray-600 italic">${suggestion.example.before}</p>
+                                </div>
+                                <div>
+                                    <h6 class="text-sm font-medium text-green-700 mb-2">Après:</h6>
+                                    <p class="text-sm text-gray-600 italic">${suggestion.example.after}</p>
+                                </div>
+                            </div>
                         </div>
-                    </div>
-                    
-                    <div>
-                        <h6 class="font-semibold text-blue-800 mb-3 flex items-center">
-                            <i class="fas fa-plus-circle mr-2"></i>Mots-clés suggérés
-                        </h6>
-                        <div class="flex flex-wrap gap-2">
-                            ${keywordData.missingKeywords.map(keyword => `
-                                <span class="px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm border border-blue-300">
-                                    ${keyword}
-                                </span>
-                            `).join('')}
-                        </div>
-                    </div>
+                    ` : ''}
                 </div>
+            `).join('');
+        }
 
-                ${keywordData.suggestions.length > 0 ? `
-                    <div class="mt-6">
-                        <h6 class="font-semibold text-blue-800 mb-3 flex items-center">
-                            <i class="fas fa-lightbulb mr-2"></i>Suggestions d'amélioration
-                        </h6>
-                        <ul class="text-sm text-blue-700 space-y-1">
-                            ${keywordData.suggestions.map(suggestion => `
-                                <li class="flex items-start">
-                                    <i class="fas fa-arrow-right text-blue-500 mr-2 mt-1"></i>${suggestion}
-                                </li>
-                            `).join('')}
-                        </ul>
-                    </div>
-                ` : ''}
-            </div>
-        `;
-
-        document.getElementById('analysisDetails').appendChild(container);
+        // Display before/after comparison
+        const comparisonContainer = document.getElementById('beforeAfterComparison');
+        if (improvements.comparison) {
+            comparisonContainer.innerHTML = `
+                <div>
+                    <h4 class="text-lg font-semibold text-red-700 mb-4">Avant amélioration</h4>
+                    <ul class="space-y-2">
+                        ${improvements.comparison.before.map(item => `
+                            <li class="flex items-center text-red-600">
+                                <i class="fas fa-times-circle mr-3"></i>
+                                <span>${item}</span>
+                            </li>
+                        `).join('')}
+                    </ul>
+                </div>
+                <div>
+                    <h4 class="text-lg font-semibold text-green-700 mb-4">Après amélioration</h4>
+                    <ul class="space-y-2">
+                        ${improvements.comparison.after.map(item => `
+                            <li class="flex items-center text-green-600">
+                                <i class="fas fa-check-circle mr-3"></i>
+                                <span>${item}</span>
+                            </li>
+                        `).join('')}
+                    </ul>
+                </div>
+            `;
+        }
     }
 }
 
-// Initialize app
+// Initialize the app when DOM is loaded
 document.addEventListener('DOMContentLoaded', () => {
-    new CVApp();
+    new MyCVApp();
 });
