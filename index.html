@@ -8,7 +8,7 @@
   <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-   <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
     
@@ -20,7 +20,7 @@
 
     body {
       font-family: 'Inter', sans-serif;
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      background-color: #f8fafc;
       min-height: 100vh;
     }
 
@@ -79,55 +79,138 @@
     }
 
     .bg-gradient-primary {
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
     }
 
     .bg-gradient-secondary {
-      background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+      background: linear-gradient(135deg, #f97316 0%, #f59e0b 100%);
     }
 
     .bg-gradient-success {
-      background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+      background: linear-gradient(135deg, #10b981 0%, #34d399 100%);
     }
 
     .bg-gradient-warning {
-      background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);
+      background: linear-gradient(135deg, #f59e0b 0%, #fbbf24 100%);
     }
 
     .bg-gradient-danger {
-      background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
+      background: linear-gradient(135deg, #ef4444 0%, #f87171 100%);
     }
 
     .text-gradient {
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
       -webkit-background-clip: text;
       -webkit-text-fill-color: transparent;
       background-clip: text;
+    }
+
+    /* Custom scrollbar */
+    ::-webkit-scrollbar {
+      width: 8px;
+      height: 8px;
+    }
+
+    ::-webkit-scrollbar-track {
+      background: #f1f1f1;
+      border-radius: 10px;
+    }
+
+    ::-webkit-scrollbar-thumb {
+      background: #c7d2fe;
+      border-radius: 10px;
+    }
+
+    ::-webkit-scrollbar-thumb:hover {
+      background: #a5b4fc;
+    }
+
+    /* Tab styling */
+    .tab-button {
+      position: relative;
+      transition: all 0.3s ease;
+    }
+
+    .tab-button.active::after {
+      content: '';
+      position: absolute;
+      bottom: -8px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 20px;
+      height: 3px;
+      background-color: #6366f1;
+      border-radius: 3px;
+    }
+
+    /* Analysis section improvements */
+    .analysis-tab {
+      transition: all 0.3s ease;
+      border-bottom: 3px solid transparent;
+    }
+
+    .analysis-tab.active {
+      border-bottom-color: #6366f1;
+      color: #6366f1;
+      font-weight: 600;
+    }
+
+    .analysis-content {
+      display: none;
+    }
+
+    .analysis-content.active {
+      display: block;
+      animation: fadeIn 0.3s ease-out;
+    }
+
+    /* Floating action button */
+    .fab {
+      position: fixed;
+      bottom: 2rem;
+      right: 2rem;
+      z-index: 50;
+      box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+    }
+
+    /* Improved form inputs */
+    .form-input {
+      transition: all 0.3s ease;
+      box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+    }
+
+    .form-input:focus {
+      box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.3);
+    }
+
+    /* Score circle animation */
+    @keyframes circle-fill {
+      to { stroke-dashoffset: 0; }
     }
   </style>
 </head>
 <body>
   <div id="app">
     <!-- Header -->
-    <header class="bg-white shadow-lg">
+    <header class="bg-white shadow-sm sticky top-0 z-40">
       <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div class="flex justify-between items-center py-6">
+        <div class="flex justify-between items-center py-4">
           <div class="flex items-center">
-            <div class="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center mr-3">
+            <div class="w-10 h-10 bg-indigo-600 rounded-lg flex items-center justify-center mr-3">
               <i class="fas fa-file-alt text-white"></i>
             </div>
             <div>
-              <h1 class="text-2xl font-bold text-gray-900">CV Builder Pro</h1>
-              <p class="text-sm text-gray-600">Générateur de CV optimisé ATS avec analyse IA</p>
+              <h1 class="text-xl font-bold text-gray-900">CV Builder Pro</h1>
+              <p class="text-xs text-gray-600">Générateur de CV optimisé ATS avec analyse IA</p>
             </div>
           </div>
           
           <!-- Navigation Tabs -->
-          <nav class="flex space-x-1 bg-blue-600 rounded-lg p-1">
-            <button id="createTab" class="tab-button px-6 py-2 rounded-md text-sm font-medium transition-all duration-200 active border-white text-white">
+          <nav class="flex space-x-1">
+            <button id="createTab" class="tab-button px-4 py-2 text-sm font-medium transition-all duration-200 active text-gray-900">
               <i class="fas fa-plus mr-2"></i>Créer CV
             </button>
-            <button id="analyzeTab" class="tab-button px-6 py-2 rounded-md text-sm font-medium transition-all duration-200 border-transparent text-white/70 hover:text-white">
+            <button id="analyzeTab" class="tab-button px-4 py-2 text-sm font-medium transition-all duration-200 text-gray-500 hover:text-gray-900">
               <i class="fas fa-search mr-2"></i>Analyser CV
             </button>
           </nav>
@@ -135,142 +218,142 @@
       </div>
     </header>
 
-    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
       <!-- Create CV Section -->
       <div id="createSection" class="animate-fade-in">
         <!-- Step Indicators -->
         <div class="flex justify-center mb-8">
           <div class="flex items-center space-x-4">
             <div class="step-indicator flex items-center">
-              <div class="w-10 h-10 bg-blue-600 text-white rounded-full flex items-center justify-center font-semibold shadow-lg">1</div>
-              <span class="ml-2 text-white font-medium">Informations</span>
+              <div class="w-8 h-8 bg-indigo-600 text-white rounded-full flex items-center justify-center font-semibold shadow-md">1</div>
+              <span class="ml-2 text-gray-700 font-medium">Informations</span>
             </div>
-            <div class="w-12 h-0.5 bg-white/30"></div>
+            <div class="w-8 h-0.5 bg-gray-300"></div>
             <div class="step-indicator flex items-center">
-              <div class="w-10 h-10 bg-gray-400 text-gray-300 rounded-full flex items-center justify-center font-semibold">2</div>
-              <span class="ml-2 text-gray-300 font-medium">Template</span>
+              <div class="w-8 h-8 bg-gray-300 text-gray-500 rounded-full flex items-center justify-center font-semibold">2</div>
+              <span class="ml-2 text-gray-400 font-medium">Template</span>
             </div>
-            <div class="w-12 h-0.5 bg-white/30"></div>
+            <div class="w-8 h-0.5 bg-gray-300"></div>
             <div class="step-indicator flex items-center">
-              <div class="w-10 h-10 bg-gray-400 text-gray-300 rounded-full flex items-center justify-center font-semibold">3</div>
-              <span class="ml-2 text-gray-300 font-medium">Aperçu</span>
+              <div class="w-8 h-8 bg-gray-300 text-gray-500 rounded-full flex items-center justify-center font-semibold">3</div>
+              <span class="ml-2 text-gray-400 font-medium">Aperçu</span>
             </div>
           </div>
         </div>
 
         <!-- Step 1: Personal Information -->
         <div id="step1" class="form-section">
-          <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+          <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <!-- Form -->
-            <div class="bg-white rounded-2xl shadow-xl p-8">
-              <h2 class="text-2xl font-bold text-gray-900 mb-6 flex items-center">
-                <i class="fas fa-user mr-3 text-blue-600"></i>
+            <div class="bg-white rounded-xl shadow-md p-6">
+              <h2 class="text-xl font-bold text-gray-900 mb-4 flex items-center">
+                <i class="fas fa-user mr-2 text-indigo-600"></i>
                 Informations personnelles
               </h2>
               
-              <div class="space-y-6">
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div class="space-y-4">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
                   <div class="form-group">
-                    <label for="firstName" class="block text-sm font-semibold text-gray-700 mb-2">Prénom *</label>
-                    <input type="text" id="firstName" class="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all duration-300" required>
+                    <label for="firstName" class="block text-sm font-medium text-gray-700 mb-1">Prénom *</label>
+                    <input type="text" id="firstName" class="form-input w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-indigo-500" required>
                   </div>
                   <div class="form-group">
-                    <label for="lastName" class="block text-sm font-semibold text-gray-700 mb-2">Nom *</label>
-                    <input type="text" id="lastName" class="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all duration-300" required>
-                  </div>
-                </div>
-
-                <div class="form-group">
-                  <label for="jobTitle" class="block text-sm font-semibold text-gray-700 mb-2">Titre professionnel *</label>
-                  <input type="text" id="jobTitle" class="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all duration-300" placeholder="Ex: Développeur Full Stack" required>
-                </div>
-
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div class="form-group">
-                    <label for="email" class="block text-sm font-semibold text-gray-700 mb-2">Email *</label>
-                    <input type="email" id="email" class="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all duration-300" required>
-                  </div>
-                  <div class="form-group">
-                    <label for="phone" class="block text-sm font-semibold text-gray-700 mb-2">Téléphone *</label>
-                    <input type="tel" id="phone" class="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all duration-300" required>
+                    <label for="lastName" class="block text-sm font-medium text-gray-700 mb-1">Nom *</label>
+                    <input type="text" id="lastName" class="form-input w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-indigo-500" required>
                   </div>
                 </div>
 
                 <div class="form-group">
-                  <label for="address" class="block text-sm font-semibold text-gray-700 mb-2">Adresse</label>
-                  <input type="text" id="address" class="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all duration-300">
+                  <label for="jobTitle" class="block text-sm font-medium text-gray-700 mb-1">Titre professionnel *</label>
+                  <input type="text" id="jobTitle" class="form-input w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-indigo-500" placeholder="Ex: Développeur Full Stack" required>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <div class="form-group">
+                    <label for="email" class="block text-sm font-medium text-gray-700 mb-1">Email *</label>
+                    <input type="email" id="email" class="form-input w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-indigo-500" required>
+                  </div>
+                  <div class="form-group">
+                    <label for="phone" class="block text-sm font-medium text-gray-700 mb-1">Téléphone *</label>
+                    <input type="tel" id="phone" class="form-input w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-indigo-500" required>
+                  </div>
                 </div>
 
                 <div class="form-group">
-                  <label for="linkedin" class="block text-sm font-semibold text-gray-700 mb-2">LinkedIn</label>
-                  <input type="url" id="linkedin" class="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all duration-300" placeholder="https://linkedin.com/in/votre-profil">
+                  <label for="address" class="block text-sm font-medium text-gray-700 mb-1">Adresse</label>
+                  <input type="text" id="address" class="form-input w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-indigo-500">
                 </div>
 
                 <div class="form-group">
-                  <label for="summary" class="block text-sm font-semibold text-gray-700 mb-2">Résumé professionnel *</label>
-                  <textarea id="summary" rows="4" class="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all duration-300 resize-none" placeholder="Décrivez brièvement votre profil professionnel..." required></textarea>
+                  <label for="linkedin" class="block text-sm font-medium text-gray-700 mb-1">LinkedIn</label>
+                  <input type="url" id="linkedin" class="form-input w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-indigo-500" placeholder="https://linkedin.com/in/votre-profil">
+                </div>
+
+                <div class="form-group">
+                  <label for="summary" class="block text-sm font-medium text-gray-700 mb-1">Résumé professionnel *</label>
+                  <textarea id="summary" rows="3" class="form-input w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-indigo-500 resize-none" placeholder="Décrivez brièvement votre profil professionnel..." required></textarea>
                 </div>
 
                 <!-- Experience Section -->
-                <div class="border-t pt-6">
-                  <div class="flex justify-between items-center mb-4">
-                    <h3 class="text-lg font-semibold text-gray-900 flex items-center">
-                      <i class="fas fa-briefcase mr-2 text-blue-600"></i>
+                <div class="border-t pt-4">
+                  <div class="flex justify-between items-center mb-3">
+                    <h3 class="text-md font-semibold text-gray-900 flex items-center">
+                      <i class="fas fa-briefcase mr-2 text-indigo-600"></i>
                       Expérience professionnelle
                     </h3>
-                    <button id="addExperience" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200 flex items-center">
-                      <i class="fas fa-plus mr-2"></i>Ajouter
+                    <button id="addExperience" class="px-3 py-1.5 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors duration-200 flex items-center text-sm">
+                      <i class="fas fa-plus mr-1"></i>Ajouter
                     </button>
                   </div>
-                  <div id="experienceContainer" class="space-y-4"></div>
+                  <div id="experienceContainer" class="space-y-3"></div>
                 </div>
 
                 <!-- Education Section -->
-                <div class="border-t pt-6">
-                  <div class="flex justify-between items-center mb-4">
-                    <h3 class="text-lg font-semibold text-gray-900 flex items-center">
-                      <i class="fas fa-graduation-cap mr-2 text-green-600"></i>
+                <div class="border-t pt-4">
+                  <div class="flex justify-between items-center mb-3">
+                    <h3 class="text-md font-semibold text-gray-900 flex items-center">
+                      <i class="fas fa-graduation-cap mr-2 text-emerald-600"></i>
                       Formation
                     </h3>
-                    <button id="addEducation" class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors duration-200 flex items-center">
-                      <i class="fas fa-plus mr-2"></i>Ajouter
+                    <button id="addEducation" class="px-3 py-1.5 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors duration-200 flex items-center text-sm">
+                      <i class="fas fa-plus mr-1"></i>Ajouter
                     </button>
                   </div>
-                  <div id="educationContainer" class="space-y-4"></div>
+                  <div id="educationContainer" class="space-y-3"></div>
                 </div>
 
                 <!-- Skills Section -->
-                <div class="border-t pt-6">
-                  <h3 class="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-                    <i class="fas fa-cogs mr-2 text-purple-600"></i>
+                <div class="border-t pt-4">
+                  <h3 class="text-md font-semibold text-gray-900 mb-3 flex items-center">
+                    <i class="fas fa-cogs mr-2 text-violet-600"></i>
                     Compétences
                   </h3>
-                  <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
                     <div class="form-group">
-                      <label for="technicalSkills" class="block text-sm font-semibold text-gray-700 mb-2">Compétences techniques</label>
-                      <textarea id="technicalSkills" rows="3" class="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-200 transition-all duration-300 resize-none" placeholder="JavaScript, Python, React..."></textarea>
+                      <label for="technicalSkills" class="block text-sm font-medium text-gray-700 mb-1">Compétences techniques</label>
+                      <textarea id="technicalSkills" rows="2" class="form-input w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-violet-500 resize-none" placeholder="JavaScript, Python, React..."></textarea>
                     </div>
                     <div class="form-group">
-                      <label for="softSkills" class="block text-sm font-semibold text-gray-700 mb-2">Compétences interpersonnelles</label>
-                      <textarea id="softSkills" rows="3" class="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-200 transition-all duration-300 resize-none" placeholder="Leadership, Communication..."></textarea>
+                      <label for="softSkills" class="block text-sm font-medium text-gray-700 mb-1">Compétences interpersonnelles</label>
+                      <textarea id="softSkills" rows="2" class="form-input w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-violet-500 resize-none" placeholder="Leadership, Communication..."></textarea>
                     </div>
                   </div>
                 </div>
 
                 <!-- Languages Section -->
-                <div class="border-t pt-6">
-                  <h3 class="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-                    <i class="fas fa-language mr-2 text-orange-600"></i>
+                <div class="border-t pt-4">
+                  <h3 class="text-md font-semibold text-gray-900 mb-3 flex items-center">
+                    <i class="fas fa-language mr-2 text-amber-600"></i>
                     Langues
                   </h3>
                   <div class="form-group">
-                    <textarea id="languages" rows="2" class="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-200 transition-all duration-300 resize-none" placeholder="Français (natif), Anglais (courant)..."></textarea>
+                    <textarea id="languages" rows="2" class="form-input w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-amber-500 resize-none" placeholder="Français (natif), Anglais (courant)..."></textarea>
                   </div>
                 </div>
               </div>
 
-              <div class="flex justify-end mt-8">
-                <button id="nextToTemplate" class="px-8 py-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-all duration-300 font-semibold shadow-lg hover:shadow-xl flex items-center">
+              <div class="flex justify-end mt-6">
+                <button id="nextToTemplate" class="px-6 py-2.5 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-all duration-300 font-medium shadow-md hover:shadow-lg flex items-center">
                   Suivant
                   <i class="fas fa-arrow-right ml-2"></i>
                 </button>
@@ -278,22 +361,22 @@
             </div>
 
             <!-- Live Preview -->
-            <div class="bg-white rounded-2xl shadow-xl p-6">
-              <div class="flex justify-between items-center mb-4">
-                <h3 class="text-lg font-semibold text-gray-900 flex items-center">
-                  <i class="fas fa-eye mr-2 text-blue-600"></i>
+            <div class="bg-white rounded-xl shadow-md p-5">
+              <div class="flex justify-between items-center mb-3">
+                <h3 class="text-md font-semibold text-gray-900 flex items-center">
+                  <i class="fas fa-eye mr-2 text-indigo-600"></i>
                   Aperçu en temps réel
                 </h3>
-                <div class="flex space-x-2">
-                  <button id="zoomOut" class="p-2 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors">
-                    <i class="fas fa-search-minus text-gray-600"></i>
+                <div class="flex space-x-1">
+                  <button id="zoomOut" class="p-1.5 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors">
+                    <i class="fas fa-search-minus text-gray-600 text-sm"></i>
                   </button>
-                  <button id="zoomIn" class="p-2 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors">
-                    <i class="fas fa-search-plus text-gray-600"></i>
+                  <button id="zoomIn" class="p-1.5 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors">
+                    <i class="fas fa-search-plus text-gray-600 text-sm"></i>
                   </button>
                 </div>
               </div>
-              <div class="border-2 border-gray-200 rounded-xl overflow-hidden" style="height: 600px;">
+              <div class="border border-gray-200 rounded-lg overflow-hidden" style="height: 500px;">
                 <div id="cvPreview" class="w-full h-full overflow-auto" style="transform: scale(0.75); transform-origin: top left; width: 133.33%; height: 133.33%;">
                   <div class="bg-gray-50 h-full flex items-center justify-center">
                     <p class="text-gray-500">Remplissez le formulaire pour voir l'aperçu</p>
@@ -306,52 +389,52 @@
 
         <!-- Step 2: Template Selection -->
         <div id="step2" class="form-section hidden">
-          <div class="bg-white rounded-2xl shadow-xl p-8">
-            <h2 class="text-2xl font-bold text-gray-900 mb-6 flex items-center">
-              <i class="fas fa-palette mr-3 text-blue-600"></i>
+          <div class="bg-white rounded-xl shadow-md p-6">
+            <h2 class="text-xl font-bold text-gray-900 mb-4 flex items-center">
+              <i class="fas fa-palette mr-2 text-indigo-600"></i>
               Choisissez votre template
             </h2>
             
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-              <div class="template-option border-2 border-gray-200 rounded-xl p-4 cursor-pointer transition-all duration-300 hover:shadow-lg" data-template="modern">
-                <div class="bg-blue-50 h-32 rounded-lg mb-3 flex items-center justify-center">
-                  <i class="fas fa-file-alt text-3xl text-blue-600"></i>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+              <div class="template-option border border-gray-200 rounded-lg p-3 cursor-pointer transition-all duration-300 hover:shadow-md" data-template="modern">
+                <div class="bg-indigo-50 h-28 rounded-md mb-2 flex items-center justify-center">
+                  <i class="fas fa-file-alt text-2xl text-indigo-600"></i>
                 </div>
-                <h3 class="font-semibold text-gray-900 text-center">Moderne</h3>
-                <p class="text-sm text-gray-600 text-center mt-1">Design contemporain avec en-tête coloré</p>
+                <h3 class="font-medium text-gray-900 text-center">Moderne</h3>
+                <p class="text-xs text-gray-600 text-center mt-1">Design contemporain avec en-tête coloré</p>
               </div>
 
-              <div class="template-option border-2 border-gray-200 rounded-xl p-4 cursor-pointer transition-all duration-300 hover:shadow-lg" data-template="classic">
-                <div class="bg-gray-50 h-32 rounded-lg mb-3 flex items-center justify-center">
-                  <i class="fas fa-file-alt text-3xl text-gray-600"></i>
+              <div class="template-option border border-gray-200 rounded-lg p-3 cursor-pointer transition-all duration-300 hover:shadow-md" data-template="classic">
+                <div class="bg-gray-50 h-28 rounded-md mb-2 flex items-center justify-center">
+                  <i class="fas fa-file-alt text-2xl text-gray-600"></i>
                 </div>
-                <h3 class="font-semibold text-gray-900 text-center">Classique</h3>
-                <p class="text-sm text-gray-600 text-center mt-1">Style traditionnel et professionnel</p>
+                <h3 class="font-medium text-gray-900 text-center">Classique</h3>
+                <p class="text-xs text-gray-600 text-center mt-1">Style traditionnel et professionnel</p>
               </div>
 
-              <div class="template-option border-2 border-gray-200 rounded-xl p-4 cursor-pointer transition-all duration-300 hover:shadow-lg" data-template="professional">
-                <div class="bg-gray-800 h-32 rounded-lg mb-3 flex items-center justify-center">
-                  <i class="fas fa-file-alt text-3xl text-white"></i>
+              <div class="template-option border border-gray-200 rounded-lg p-3 cursor-pointer transition-all duration-300 hover:shadow-md" data-template="professional">
+                <div class="bg-gray-800 h-28 rounded-md mb-2 flex items-center justify-center">
+                  <i class="fas fa-file-alt text-2xl text-white"></i>
                 </div>
-                <h3 class="font-semibold text-gray-900 text-center">Professionnel</h3>
-                <p class="text-sm text-gray-600 text-center mt-1">Layout à deux colonnes élégant</p>
+                <h3 class="font-medium text-gray-900 text-center">Professionnel</h3>
+                <p class="text-xs text-gray-600 text-center mt-1">Layout à deux colonnes élégant</p>
               </div>
 
-              <div class="template-option border-2 border-gray-200 rounded-xl p-4 cursor-pointer transition-all duration-300 hover:shadow-lg" data-template="minimal">
-                <div class="bg-white border h-32 rounded-lg mb-3 flex items-center justify-center">
-                  <i class="fas fa-file-alt text-3xl text-gray-400"></i>
+              <div class="template-option border border-gray-200 rounded-lg p-3 cursor-pointer transition-all duration-300 hover:shadow-md" data-template="minimal">
+                <div class="bg-white border h-28 rounded-md mb-2 flex items-center justify-center">
+                  <i class="fas fa-file-alt text-2xl text-gray-400"></i>
                 </div>
-                <h3 class="font-semibold text-gray-900 text-center">Minimaliste</h3>
-                <p class="text-sm text-gray-600 text-center mt-1">Design épuré et moderne</p>
+                <h3 class="font-medium text-gray-900 text-center">Minimaliste</h3>
+                <p class="text-xs text-gray-600 text-center mt-1">Design épuré et moderne</p>
               </div>
             </div>
 
             <div class="flex justify-between">
-              <button id="backToInfo" class="px-8 py-3 bg-gray-500 text-white rounded-xl hover:bg-gray-600 transition-all duration-300 font-semibold flex items-center">
+              <button id="backToInfo" class="px-6 py-2.5 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-all duration-300 font-medium flex items-center">
                 <i class="fas fa-arrow-left mr-2"></i>
                 Retour
               </button>
-              <button id="generateCV" class="px-8 py-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-all duration-300 font-semibold shadow-lg hover:shadow-xl flex items-center">
+              <button id="generateCV" class="px-6 py-2.5 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-all duration-300 font-medium shadow-md hover:shadow-lg flex items-center">
                 Générer le CV
                 <i class="fas fa-magic ml-2"></i>
               </button>
@@ -361,42 +444,42 @@
 
         <!-- Step 3: Final Preview -->
         <div id="step3" class="form-section hidden">
-          <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
             <!-- CV Preview -->
-            <div class="lg:col-span-2 bg-white rounded-2xl shadow-xl p-6">
-              <div class="flex justify-between items-center mb-4">
-                <h2 class="text-xl font-bold text-gray-900 flex items-center">
-                  <i class="fas fa-file-alt mr-3 text-blue-600"></i>
+            <div class="lg:col-span-2 bg-white rounded-xl shadow-md p-5">
+              <div class="flex justify-between items-center mb-3">
+                <h2 class="text-lg font-bold text-gray-900 flex items-center">
+                  <i class="fas fa-file-alt mr-2 text-indigo-600"></i>
                   Votre CV
                 </h2>
-                <div class="flex space-x-2">
-                  <button id="zoomOut" class="p-2 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors">
-                    <i class="fas fa-search-minus text-gray-600"></i>
+                <div class="flex space-x-1">
+                  <button id="zoomOut" class="p-1.5 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors">
+                    <i class="fas fa-search-minus text-gray-600 text-sm"></i>
                   </button>
-                  <button id="zoomIn" class="p-2 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors">
-                    <i class="fas fa-search-plus text-gray-600"></i>
+                  <button id="zoomIn" class="p-1.5 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors">
+                    <i class="fas fa-search-plus text-gray-600 text-sm"></i>
                   </button>
                 </div>
               </div>
-              <div class="border-2 border-gray-200 rounded-xl overflow-hidden" style="height: 700px;">
+              <div class="border border-gray-200 rounded-lg overflow-hidden" style="height: 600px;">
                 <div id="cvPreview" class="w-full h-full overflow-auto" style="transform: scale(0.75); transform-origin: top left; width: 133.33%; height: 133.33%;"></div>
               </div>
             </div>
 
             <!-- Actions Panel -->
-            <div class="space-y-6">
+            <div class="space-y-4">
               <!-- Download Actions -->
-              <div class="bg-white rounded-2xl shadow-xl p-6">
-                <h3 class="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-                  <i class="fas fa-download mr-2 text-green-600"></i>
+              <div class="bg-white rounded-xl shadow-md p-5">
+                <h3 class="text-md font-semibold text-gray-900 mb-3 flex items-center">
+                  <i class="fas fa-download mr-2 text-emerald-600"></i>
                   Télécharger
                 </h3>
-                <div class="space-y-3">
-                  <button id="downloadPDF" class="w-full px-4 py-3 bg-green-600 text-white rounded-xl hover:bg-green-700 transition-all duration-300 font-semibold flex items-center justify-center">
+                <div class="space-y-2">
+                  <button id="downloadPDF" class="w-full px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-all duration-300 font-medium flex items-center justify-center">
                     <i class="fas fa-file-pdf mr-2"></i>
                     Télécharger PDF
                   </button>
-                  <button id="printCV" class="w-full px-4 py-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-all duration-300 font-semibold flex items-center justify-center">
+                  <button id="printCV" class="w-full px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-all duration-300 font-medium flex items-center justify-center">
                     <i class="fas fa-print mr-2"></i>
                     Imprimer
                   </button>
@@ -404,17 +487,17 @@
               </div>
 
               <!-- Save/Load Actions -->
-              <div class="bg-white rounded-2xl shadow-xl p-6">
-                <h3 class="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-                  <i class="fas fa-save mr-2 text-purple-600"></i>
+              <div class="bg-white rounded-xl shadow-md p-5">
+                <h3 class="text-md font-semibold text-gray-900 mb-3 flex items-center">
+                  <i class="fas fa-save mr-2 text-violet-600"></i>
                   Sauvegarde
                 </h3>
-                <div class="space-y-3">
-                  <button id="saveBtn" class="w-full px-4 py-3 bg-purple-600 text-white rounded-xl hover:bg-purple-700 transition-all duration-300 font-semibold flex items-center justify-center">
+                <div class="space-y-2">
+                  <button id="saveBtn" class="w-full px-4 py-2 bg-violet-600 text-white rounded-lg hover:bg-violet-700 transition-all duration-300 font-medium flex items-center justify-center">
                     <i class="fas fa-save mr-2"></i>
                     Sauvegarder
                   </button>
-                  <button id="loadBtn" class="w-full px-4 py-3 bg-orange-600 text-white rounded-xl hover:bg-orange-700 transition-all duration-300 font-semibold flex items-center justify-center">
+                  <button id="loadBtn" class="w-full px-4 py-2 bg-amber-600 text-white rounded-lg hover:bg-amber-700 transition-all duration-300 font-medium flex items-center justify-center">
                     <i class="fas fa-folder-open mr-2"></i>
                     Charger
                   </button>
@@ -422,17 +505,17 @@
               </div>
 
               <!-- Navigation Actions -->
-              <div class="bg-white rounded-2xl shadow-xl p-6">
-                <h3 class="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+              <div class="bg-white rounded-xl shadow-md p-5">
+                <h3 class="text-md font-semibold text-gray-900 mb-3 flex items-center">
                   <i class="fas fa-cog mr-2 text-gray-600"></i>
                   Actions
                 </h3>
-                <div class="space-y-3">
-                  <button id="backToTemplate" class="w-full px-4 py-3 bg-gray-500 text-white rounded-xl hover:bg-gray-600 transition-all duration-300 font-semibold flex items-center justify-center">
+                <div class="space-y-2">
+                  <button id="backToTemplate" class="w-full px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-all duration-300 font-medium flex items-center justify-center">
                     <i class="fas fa-arrow-left mr-2"></i>
                     Modifier Template
                   </button>
-                  <button id="newCV" class="w-full px-4 py-3 bg-red-600 text-white rounded-xl hover:bg-red-700 transition-all duration-300 font-semibold flex items-center justify-center">
+                  <button id="newCV" class="w-full px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-all duration-300 font-medium flex items-center justify-center">
                     <i class="fas fa-plus mr-2"></i>
                     Nouveau CV
                   </button>
@@ -445,110 +528,148 @@
 
       <!-- Analyze CV Section -->
       <div id="analyzeSection" class="hidden animate-fade-in">
-        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          <!-- Upload Section -->
-          <div class="bg-white rounded-2xl shadow-xl p-8">
-            <h2 class="text-2xl font-bold text-gray-900 mb-6 flex items-center">
-              <i class="fas fa-robot mr-3 text-purple-600"></i>
-              Analyse IA de votre CV
-            </h2>
-            
-            <div class="space-y-6">
-              <div class="border-2 border-dashed border-gray-300 rounded-xl p-8 text-center hover:border-purple-400 transition-colors duration-300">
-                <div class="w-16 h-16 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <i class="fas fa-cloud-upload-alt text-2xl text-purple-600"></i>
-                </div>
-                <h3 class="text-lg font-semibold text-gray-900 mb-2">Téléchargez votre CV</h3>
-                <p class="text-gray-600 mb-4">Formats supportés: PDF, DOC, DOCX, TXT</p>
-                <input type="file" id="cvFile" accept=".pdf,.doc,.docx,.txt" class="hidden">
-                <label for="cvFile" class="inline-flex items-center px-6 py-3 bg-purple-600 text-white rounded-xl hover:bg-purple-700 transition-colors duration-300 cursor-pointer font-semibold">
-                  <i class="fas fa-upload mr-2"></i>
-                  Choisir un fichier
-                </label>
-              </div>
-
-              <div class="form-group">
-                <label for="jobDescription" class="block text-sm font-semibold text-gray-700 mb-2">
-                  Description du poste (optionnel)
-                  <span class="text-gray-500 font-normal">- pour une analyse plus précise</span>
-                </label>
-                <textarea id="jobDescription" rows="4" class="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-200 transition-all duration-300 resize-none" placeholder="Collez ici la description du poste pour une analyse personnalisée..."></textarea>
-              </div>
-
-              <button id="analyzeBtn" disabled class="w-full px-6 py-4 bg-purple-600 text-white rounded-xl hover:bg-purple-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-all duration-300 font-semibold flex items-center justify-center">
-                <span id="analyzeSpinner" class="hidden">
-                  <i class="fas fa-spinner fa-spin mr-2"></i>
-                </span>
-                <span id="analyzeBtnText">Analyser avec l'IA</span>
+        <div class="bg-white rounded-xl shadow-md overflow-hidden">
+          <!-- Analysis Tabs -->
+          <div class="border-b border-gray-200">
+            <nav class="flex -mb-px">
+              <button class="analysis-tab active px-4 py-3 text-sm font-medium" data-tab="upload">
+                <i class="fas fa-upload mr-2"></i>
+                Upload CV
               </button>
+              <button class="analysis-tab px-4 py-3 text-sm font-medium" data-tab="results" disabled>
+                <i class="fas fa-chart-bar mr-2"></i>
+                Résultats
+              </button>
+            </nav>
+          </div>
+
+          <!-- Upload Tab Content -->
+          <div id="uploadTab" class="analysis-content active p-6">
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <!-- Upload Section -->
+              <div>
+                <h2 class="text-xl font-bold text-gray-900 mb-4 flex items-center">
+                  <i class="fas fa-robot mr-2 text-violet-600"></i>
+                  Analyse IA de votre CV
+                </h2>
+                
+                <div class="space-y-4">
+                  <div class="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-violet-400 transition-colors duration-300">
+                    <div class="w-14 h-14 bg-violet-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                      <i class="fas fa-cloud-upload-alt text-xl text-violet-600"></i>
+                    </div>
+                    <h3 class="text-md font-semibold text-gray-900 mb-2">Téléchargez votre CV</h3>
+                    <p class="text-sm text-gray-600 mb-3">Formats supportés: PDF, DOC, DOCX, TXT</p>
+                    <input type="file" id="cvFile" accept=".pdf,.doc,.docx,.txt" class="hidden">
+                    <label for="cvFile" class="inline-flex items-center px-5 py-2 bg-violet-600 text-white rounded-lg hover:bg-violet-700 transition-colors duration-300 cursor-pointer font-medium">
+                      <i class="fas fa-upload mr-2"></i>
+                      Choisir un fichier
+                    </label>
+                  </div>
+
+                  <div class="form-group">
+                    <label for="jobDescription" class="block text-sm font-medium text-gray-700 mb-1">
+                      Description du poste (optionnel)
+                      <span class="text-xs text-gray-500">- pour une analyse plus précise</span>
+                    </label>
+                    <textarea id="jobDescription" rows="3" class="form-input w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-violet-500 resize-none" placeholder="Collez ici la description du poste pour une analyse personnalisée..."></textarea>
+                  </div>
+
+                  <button id="analyzeBtn" disabled class="w-full px-5 py-3 bg-violet-600 text-white rounded-lg hover:bg-violet-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-all duration-300 font-medium flex items-center justify-center">
+                    <span id="analyzeSpinner" class="hidden">
+                      <i class="fas fa-spinner fa-spin mr-2"></i>
+                    </span>
+                    <span id="analyzeBtnText">Analyser avec l'IA</span>
+                  </button>
+                </div>
+              </div>
+
+              <!-- Preview Section -->
+              <div>
+                <h3 class="text-md font-semibold text-gray-900 mb-3 flex items-center">
+                  <i class="fas fa-eye mr-2 text-indigo-600"></i>
+                  Aperçu du fichier
+                </h3>
+                <div id="analyzedCvPreview" class="border border-gray-200 rounded-lg p-3 h-full min-h-[300px] bg-gray-50 flex items-center justify-center">
+                  <p class="text-gray-500 text-center">
+                    <i class="fas fa-file-alt text-3xl mb-3 block"></i>
+                    Sélectionnez un fichier pour voir l'aperçu
+                  </p>
+                </div>
+              </div>
             </div>
           </div>
 
-          <!-- Preview Section -->
-          <div class="bg-white rounded-2xl shadow-xl p-8">
-            <h3 class="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-              <i class="fas fa-eye mr-2 text-blue-600"></i>
-              Aperçu du fichier
-            </h3>
-            <div id="analyzedCvPreview" class="border-2 border-gray-200 rounded-xl p-4 min-h-[300px] bg-gray-50 flex items-center justify-center">
-              <p class="text-gray-500 text-center">
-                <i class="fas fa-file-alt text-4xl mb-4 block"></i>
-                Sélectionnez un fichier pour voir l'aperçu
-              </p>
-            </div>
-          </div>
-        </div>
-
-        <!-- Analysis Results -->
-        <div id="analysisResults" class="hidden mt-8 animate-slide-up">
-          <!-- Overall Score -->
-          <div class="bg-white rounded-2xl shadow-xl p-8 mb-8">
-            <div class="text-center">
-              <h2 class="text-2xl font-bold text-gray-900 mb-6 flex items-center justify-center">
-                <i class="fas fa-chart-line mr-3 text-blue-600"></i>
-                Résultat de l'analyse
-              </h2>
-              
-              <div class="relative w-40 h-40 mx-auto mb-6">
-                <svg class="w-40 h-40 transform -rotate-90" viewBox="0 0 144 144">
-                  <circle cx="72" cy="72" r="70" stroke="#e5e7eb" stroke-width="4" fill="none"/>
-                  <circle id="scoreCircle" cx="72" cy="72" r="70" stroke="#3b82f6" stroke-width="4" fill="none" 
-                          stroke-dasharray="439.82" stroke-dashoffset="439.82" 
-                          class="transition-all duration-2000 ease-out"/>
-                </svg>
-                <div class="absolute inset-0 flex items-center justify-center">
-                  <div class="text-center">
-                    <div id="overallScore" class="text-4xl font-bold text-blue-600">0</div>
-                    <div class="text-sm text-gray-600">/ 100</div>
+          <!-- Results Tab Content -->
+          <div id="resultsTab" class="analysis-content p-6">
+            <!-- Overall Score -->
+            <div class="mb-6">
+              <div class="text-center">
+                <h2 class="text-xl font-bold text-gray-900 mb-4 flex items-center justify-center">
+                  <i class="fas fa-chart-line mr-2 text-indigo-600"></i>
+                  Résultat de l'analyse
+                </h2>
+                
+                <div class="relative w-32 h-32 mx-auto mb-4">
+                  <svg class="w-32 h-32 transform -rotate-90" viewBox="0 0 144 144">
+                    <circle cx="72" cy="72" r="70" stroke="#e5e7eb" stroke-width="4" fill="none"/>
+                    <circle id="scoreCircle" cx="72" cy="72" r="70" stroke="#6366f1" stroke-width="4" fill="none" 
+                            stroke-dasharray="439.82" stroke-dashoffset="439.82" 
+                            class="transition-all duration-2000 ease-out"/>
+                  </svg>
+                  <div class="absolute inset-0 flex items-center justify-center">
+                    <div class="text-center">
+                      <div id="overallScore" class="text-3xl font-bold text-indigo-600">0</div>
+                      <div class="text-xs text-gray-600">/ 100</div>
+                    </div>
                   </div>
                 </div>
+                
+                <div id="scoreDescription" class="text-md font-medium text-gray-700"></div>
               </div>
-              
-              <div id="scoreDescription" class="text-lg font-medium text-gray-700"></div>
             </div>
-          </div>
 
-          <!-- Detailed Analysis -->
-          <div class="bg-white rounded-2xl shadow-xl p-8 mb-8">
-            <h3 class="text-xl font-bold text-gray-900 mb-6 flex items-center">
-              <i class="fas fa-microscope mr-3 text-green-600"></i>
-              Analyse détaillée
-            </h3>
-            <div id="analysisDetails" class="space-y-6"></div>
-          </div>
+            <!-- Analysis Tabs -->
+            <div class="border-b border-gray-200 mb-6">
+              <nav class="flex -mb-px space-x-4">
+                <button class="analysis-tab active px-3 py-2 text-sm font-medium" data-tab="details">
+                  <i class="fas fa-list-ul mr-2"></i>
+                  Détails
+                </button>
+                <button class="analysis-tab px-3 py-2 text-sm font-medium" data-tab="recommendations">
+                  <i class="fas fa-lightbulb mr-2"></i>
+                  Recommandations
+                </button>
+              </nav>
+            </div>
 
-          <!-- Recommendations -->
-          <div class="bg-white rounded-2xl shadow-xl p-8">
-            <h3 class="text-xl font-bold text-gray-900 mb-6 flex items-center">
-              <i class="fas fa-lightbulb mr-3 text-yellow-600"></i>
-              Recommandations d'amélioration
-            </h3>
-            <div id="recommendations" class="space-y-4"></div>
+            <!-- Analysis Details Content -->
+            <div id="analysisDetailsContent" class="analysis-content active">
+              <div id="analysisDetails" class="space-y-4"></div>
+            </div>
+
+            <!-- Recommendations Content -->
+            <div id="recommendationsContent" class="analysis-content hidden">
+              <div id="recommendations" class="space-y-3"></div>
+            </div>
+
+            <!-- Back Button -->
+            <div class="mt-6">
+              <button id="backToUpload" class="px-5 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-all duration-300 font-medium flex items-center">
+                <i class="fas fa-arrow-left mr-2"></i>
+                Analyser un autre CV
+              </button>
+            </div>
           </div>
         </div>
       </div>
     </main>
   </div>
+
+  <!-- Floating Action Button -->
+  <button id="scrollToTop" class="fab hidden w-12 h-12 bg-indigo-600 text-white rounded-full flex items-center justify-center hover:bg-indigo-700 transition-colors duration-300">
+    <i class="fas fa-arrow-up"></i>
+  </button>
 
   <script type="module" src="/src/app.js"></script>
 </body>
