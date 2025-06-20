@@ -1,14 +1,16 @@
 import { CVGenerator } from './cv-generator.js';
 import { CVAnalyzer } from './cv-analyzer.js';
 import { CVImprover } from './cv-improver.js';
-import { PaymentService } from './templates.js';
+import { PaymentServiceEnhanced } from './payment-service-enhanced.js';
+import { AuthService } from './auth-service.js';
 
 class MyCVApp {
     constructor() {
         this.cvGenerator = new CVGenerator();
         this.cvAnalyzer = new CVAnalyzer();
         this.cvImprover = new CVImprover();
-        this.paymentService = new PaymentService();
+        this.paymentService = new PaymentServiceEnhanced();
+        this.authService = new AuthService();
         
         this.currentStep = 1;
         this.selectedTemplate = 'modern';
@@ -23,6 +25,7 @@ class MyCVApp {
         this.educationCount = 0;
         this.zoomLevel = 0.75;
         this.selectedPaymentMethod = null;
+        this.currentPaymentPlan = 'download';
         
         this.init();
     }
@@ -30,8 +33,10 @@ class MyCVApp {
     init() {
         this.setupEventListeners();
         this.setupFormValidation();
+        this.setupAuthModal();
         this.setupPaymentModal();
         this.loadSavedData();
+        this.updateUserInterface();
     }
 
     setupEventListeners() {
@@ -44,6 +49,17 @@ class MyCVApp {
         // Home section buttons
         document.getElementById('createNewCV').addEventListener('click', () => this.showSection('create'));
         document.getElementById('improveExistingCV').addEventListener('click', () => this.showSection('improve'));
+
+        // Authentication buttons
+        document.getElementById('loginBtn').addEventListener('click', () => this.showAuthModal('login'));
+        document.getElementById('registerBtn').addEventListener('click', () => this.showAuthModal('register'));
+        document.getElementById('logoutBtn').addEventListener('click', () => this.logout());
+
+        // User menu
+        const userMenuBtn = document.getElementById('userMenuBtn');
+        if (userMenuBtn) {
+            userMenuBtn.addEventListener('click', () => this.toggleUserDropdown());
+        }
 
         // CV Creation steps
         document.getElementById('nextToTemplate').addEventListener('click', () => this.nextStep());
@@ -68,7 +84,7 @@ class MyCVApp {
         document.getElementById('zoomOut2').addEventListener('click', () => this.zoomOut('cvPreviewFinal'));
 
         // Actions
-        document.getElementById('downloadPDF').addEventListener('click', () => this.showPaymentModal());
+        document.getElementById('downloadPDF').addEventListener('click', () => this.handleDownloadRequest());
         document.getElementById('printCV').addEventListener('click', () => this.printCV());
         document.getElementById('saveBtn').addEventListener('click', () => this.saveCV());
         document.getElementById('loadBtn').addEventListener('click', () => this.loadCV());
@@ -83,6 +99,41 @@ class MyCVApp {
 
         // Form inputs for live preview
         this.setupLivePreview();
+
+        // Close modals when clicking outside
+        document.addEventListener('click', (e) => {
+            if (e.target.id === 'authModal') {
+                this.hideAuthModal();
+            }
+            if (e.target.id === 'paymentModal') {
+                this.hidePaymentModal();
+            }
+        });
+    }
+
+    setupAuthModal() {
+        const authModal = document.getElementById('authModal');
+        const closeAuthModal = document.getElementById('closeAuthModal');
+        const loginTab = document.getElementById('loginTab');
+        const registerTab = document.getElementById('registerTab');
+        const loginForm = document.getElementById('loginForm');
+        const registerForm = document.getElementById('registerForm');
+        const switchToRegister = document.getElementById('switchToRegister');
+        const switchToLogin = document.getElementById('switchToLogin');
+        const loginFormElement = document.getElementById('loginFormElement');
+        const registerFormElement = document.getElementById('registerFormElement');
+
+        closeAuthModal.addEventListener('click', () => this.hideAuthModal());
+
+        // Switch between login and register tabs
+        loginTab.addEventListener('click', () => this.switchAuthTab('login'));
+        registerTab.addEventListener('click', () => this.switchAuthTab('login'));
+        switchToRegister.addEventListener('click', () => this.switchAuthTab('register'));
+        switchToLogin.addEventListener('click', () => this.switchAuthTab('login'));
+
+        // Form submissions
+        loginFormElement.addEventListener('submit', (e) => this.handleLogin(e));
+        registerFormElement.addEventListener('submit', (e) => this.handleRegister(e));
     }
 
     setupPaymentModal() {
@@ -100,13 +151,13 @@ class MyCVApp {
             method.addEventListener('click', () => {
                 // Remove selection from all methods
                 paymentMethods.forEach(m => {
-                    m.classList.remove('border-blue-500', 'bg-blue-50');
+                    m.classList.remove('border-blue-500', 'bg-blue-50', 'selected');
                     m.querySelector('.payment-radio').classList.remove('bg-blue-500', 'border-blue-500');
                     m.querySelector('.payment-radio').classList.add('border-gray-300');
                 });
 
                 // Select current method
-                method.classList.add('border-blue-500', 'bg-blue-50');
+                method.classList.add('border-blue-500', 'bg-blue-50', 'selected');
                 const radio = method.querySelector('.payment-radio');
                 radio.classList.remove('border-gray-300');
                 radio.classList.add('bg-blue-500', 'border-blue-500');
@@ -127,7 +178,172 @@ class MyCVApp {
         processPayment.addEventListener('click', () => this.processPayment());
     }
 
-    showPaymentModal() {
+    showAuthModal(tab = 'login') {
+        document.getElementById('authModal').classList.remove('hidden');
+        this.switchAuthTab(tab);
+    }
+
+    hideAuthModal() {
+        document.getElementById('authModal').classList.add('hidden');
+        // Reset forms
+        document.getElementById('loginFormElement').reset();
+        document.getElementById('registerFormElement').reset();
+    }
+
+    switchAuthTab(tab) {
+        const loginTab = document.getElementById('loginTab');
+        const registerTab = document.getElementById('registerTab');
+        const loginForm = document.getElementById('loginForm');
+        const registerForm = document.getElementById('registerForm');
+
+        if (tab === 'login') {
+            loginTab.classList.add('text-primary-600', 'border-b-2', 'border-primary-600');
+            loginTab.classList.remove('text-gray-500');
+            registerTab.classList.remove('text-primary-600', 'border-b-2', 'border-primary-600');
+            registerTab.classList.add('text-gray-500');
+            loginForm.classList.remove('hidden');
+            registerForm.classList.add('hidden');
+        } else {
+            registerTab.classList.add('text-primary-600', 'border-b-2', 'border-primary-600');
+            registerTab.classList.remove('text-gray-500');
+            loginTab.classList.remove('text-primary-600', 'border-b-2', 'border-primary-600');
+            loginTab.classList.add('text-gray-500');
+            registerForm.classList.remove('hidden');
+            loginForm.classList.add('hidden');
+        }
+    }
+
+    async handleLogin(e) {
+        e.preventDefault();
+        
+        const email = document.getElementById('loginEmail').value;
+        const password = document.getElementById('loginPassword').value;
+        const submitBtn = document.getElementById('loginSubmitBtn');
+        const spinner = document.getElementById('loginSpinner');
+        const btnText = document.getElementById('loginBtnText');
+
+        // Show loading state
+        submitBtn.disabled = true;
+        spinner.classList.remove('hidden');
+        btnText.textContent = 'Connexion...';
+
+        try {
+            const result = await this.authService.login(email, password);
+            
+            if (result.success) {
+                this.hideAuthModal();
+                this.updateUserInterface();
+                this.showNotification(result.message, 'success');
+            } else {
+                this.showNotification(result.message, 'error');
+            }
+        } catch (error) {
+            this.showNotification('Erreur lors de la connexion', 'error');
+        } finally {
+            // Reset button state
+            submitBtn.disabled = false;
+            spinner.classList.add('hidden');
+            btnText.textContent = 'Se connecter';
+        }
+    }
+
+    async handleRegister(e) {
+        e.preventDefault();
+        
+        const firstName = document.getElementById('registerFirstName').value;
+        const lastName = document.getElementById('registerLastName').value;
+        const email = document.getElementById('registerEmail').value;
+        const phone = document.getElementById('registerPhone').value;
+        const password = document.getElementById('registerPassword').value;
+        const confirmPassword = document.getElementById('registerConfirmPassword').value;
+
+        if (password !== confirmPassword) {
+            this.showNotification('Les mots de passe ne correspondent pas', 'error');
+            return;
+        }
+
+        const submitBtn = document.getElementById('registerSubmitBtn');
+        const spinner = document.getElementById('registerSpinner');
+        const btnText = document.getElementById('registerBtnText');
+
+        // Show loading state
+        submitBtn.disabled = true;
+        spinner.classList.remove('hidden');
+        btnText.textContent = 'Création...';
+
+        try {
+            const result = await this.authService.register({
+                firstName,
+                lastName,
+                email,
+                phone,
+                password
+            });
+            
+            if (result.success) {
+                this.hideAuthModal();
+                this.updateUserInterface();
+                this.showNotification(result.message, 'success');
+            } else {
+                this.showNotification(result.message, 'error');
+            }
+        } catch (error) {
+            this.showNotification('Erreur lors de l\'inscription', 'error');
+        } finally {
+            // Reset button state
+            submitBtn.disabled = false;
+            spinner.classList.add('hidden');
+            btnText.textContent = 'Créer mon compte';
+        }
+    }
+
+    logout() {
+        const result = this.authService.logout();
+        this.updateUserInterface();
+        this.showNotification(result.message, 'success');
+    }
+
+    updateUserInterface() {
+        const isAuthenticated = this.authService.isAuthenticated();
+        const guestButtons = document.getElementById('guestButtons');
+        const userDropdown = document.getElementById('userDropdown');
+        const userName = document.getElementById('userName');
+
+        if (isAuthenticated) {
+            const user = this.authService.getCurrentUser();
+            guestButtons.classList.add('hidden');
+            userDropdown.classList.remove('hidden');
+            userName.textContent = `${user.firstName} ${user.lastName}`;
+        } else {
+            guestButtons.classList.remove('hidden');
+            userDropdown.classList.add('hidden');
+        }
+    }
+
+    toggleUserDropdown() {
+        const dropdown = document.getElementById('userDropdownMenu');
+        dropdown.classList.toggle('hidden');
+    }
+
+    handleDownloadRequest() {
+        if (!this.authService.isAuthenticated()) {
+            this.showNotification('Veuillez vous connecter pour télécharger votre CV', 'warning');
+            this.showAuthModal('login');
+            return;
+        }
+
+        this.showPaymentModal('download');
+    }
+
+    showPaymentModal(planType = 'download') {
+        this.currentPaymentPlan = planType;
+        const plan = this.paymentService.paymentPlans[planType];
+        
+        // Update plan information
+        document.getElementById('planName').textContent = plan.name;
+        document.getElementById('planDescription').textContent = plan.features[0];
+        document.getElementById('planPrice').textContent = this.paymentService.formatAmount(plan.price, plan.currency);
+        
         document.getElementById('paymentModal').classList.remove('hidden');
     }
 
@@ -138,7 +354,7 @@ class MyCVApp {
         
         // Reset payment method selection
         document.querySelectorAll('.payment-method').forEach(method => {
-            method.classList.remove('border-blue-500', 'bg-blue-50');
+            method.classList.remove('border-blue-500', 'bg-blue-50', 'selected');
             method.querySelector('.payment-radio').classList.remove('bg-blue-500', 'border-blue-500');
             method.querySelector('.payment-radio').classList.add('border-gray-300');
         });
@@ -148,7 +364,7 @@ class MyCVApp {
 
     async processPayment() {
         if (!this.selectedPaymentMethod) {
-            alert('Veuillez sélectionner une méthode de paiement');
+            this.showNotification('Veuillez sélectionner une méthode de paiement', 'warning');
             return;
         }
 
@@ -166,41 +382,87 @@ class MyCVApp {
             if (['orange', 'moov'].includes(this.selectedPaymentMethod)) {
                 phoneNumber = document.getElementById('paymentPhone').value;
                 if (!phoneNumber) {
-                    alert('Veuillez saisir votre numéro de téléphone');
+                    this.showNotification('Veuillez saisir votre numéro de téléphone', 'warning');
                     return;
                 }
             }
 
+            const currentUser = this.authService.getCurrentUser();
             const result = await this.paymentService.processPayment(
                 this.selectedPaymentMethod, 
-                500, 
-                phoneNumber
+                this.currentPaymentPlan,
+                phoneNumber,
+                currentUser
             );
 
             if (result.success) {
-                // Save transaction
-                this.paymentService.saveTransaction(result);
-                
-                // Hide modal
                 this.hidePaymentModal();
+                this.showNotification(result.message, 'success');
                 
-                // Show success message
-                alert('Paiement effectué avec succès ! Votre CV va être téléchargé.');
-                
-                // Download CV
-                await this.downloadPDF();
+                // Execute the action based on payment plan
+                if (this.currentPaymentPlan === 'download') {
+                    await this.downloadPDF();
+                }
             } else {
-                alert(result.message || 'Erreur lors du paiement');
+                this.showNotification(result.message, 'error');
             }
         } catch (error) {
             console.error('Erreur de paiement:', error);
-            alert('Erreur lors du traitement du paiement. Veuillez réessayer.');
+            this.showNotification('Erreur lors du traitement du paiement. Veuillez réessayer.', 'error');
         } finally {
             // Reset button state
             processBtn.disabled = false;
             spinner.classList.add('hidden');
-            btnText.textContent = 'Payer 500 FCFA';
+            btnText.textContent = 'Payer maintenant';
         }
+    }
+
+    showNotification(message, type = 'info') {
+        // Create notification element
+        const notification = document.createElement('div');
+        notification.className = `fixed top-4 right-4 z-50 p-4 rounded-lg shadow-lg max-w-sm transform transition-all duration-300 translate-x-full`;
+        
+        const colors = {
+            success: 'bg-green-500 text-white',
+            error: 'bg-red-500 text-white',
+            warning: 'bg-yellow-500 text-white',
+            info: 'bg-blue-500 text-white'
+        };
+        
+        const icons = {
+            success: 'fas fa-check-circle',
+            error: 'fas fa-exclamation-circle',
+            warning: 'fas fa-exclamation-triangle',
+            info: 'fas fa-info-circle'
+        };
+        
+        notification.className += ` ${colors[type]}`;
+        notification.innerHTML = `
+            <div class="flex items-center">
+                <i class="${icons[type]} mr-3"></i>
+                <span>${message}</span>
+                <button class="ml-4 text-white hover:text-gray-200" onclick="this.parentElement.parentElement.remove()">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+        `;
+        
+        document.body.appendChild(notification);
+        
+        // Animate in
+        setTimeout(() => {
+            notification.classList.remove('translate-x-full');
+        }, 100);
+        
+        // Auto remove after 5 seconds
+        setTimeout(() => {
+            notification.classList.add('translate-x-full');
+            setTimeout(() => {
+                if (notification.parentElement) {
+                    notification.remove();
+                }
+            }, 300);
+        }, 5000);
     }
 
     setupLivePreview() {
@@ -298,7 +560,7 @@ class MyCVApp {
             });
             
             if (!isValid) {
-                alert('Veuillez remplir tous les champs obligatoires');
+                this.showNotification('Veuillez remplir tous les champs obligatoires', 'warning');
             }
             
             return isValid;
@@ -501,9 +763,11 @@ class MyCVApp {
 
             const fileName = `CV_${this.cvData.personal.firstName}_${this.cvData.personal.lastName}.pdf`;
             pdf.save(fileName);
+            
+            this.showNotification('CV téléchargé avec succès !', 'success');
         } catch (error) {
             console.error('Erreur lors de la génération du PDF:', error);
-            alert('Erreur lors de la génération du PDF');
+            this.showNotification('Erreur lors de la génération du PDF', 'error');
         }
     }
 
@@ -547,7 +811,7 @@ class MyCVApp {
         };
         
         localStorage.setItem('mycv_data', JSON.stringify(cvDataToSave));
-        alert('CV sauvegardé avec succès !');
+        this.showNotification('CV sauvegardé avec succès !', 'success');
     }
 
     loadCV() {
@@ -557,9 +821,9 @@ class MyCVApp {
             this.cvData = data;
             this.selectedTemplate = data.template || 'modern';
             this.populateForm();
-            alert('CV chargé avec succès !');
+            this.showNotification('CV chargé avec succès !', 'success');
         } else {
-            alert('Aucun CV sauvegardé trouvé');
+            this.showNotification('Aucun CV sauvegardé trouvé', 'warning');
         }
     }
 
@@ -655,7 +919,7 @@ class MyCVApp {
         const jobDescription = document.getElementById('jobDescription').value;
         
         if (!fileInput.files[0]) {
-            alert('Veuillez sélectionner un fichier CV');
+            this.showNotification('Veuillez sélectionner un fichier CV', 'warning');
             return;
         }
 
@@ -673,7 +937,7 @@ class MyCVApp {
             this.displayAnalysisResults(analysis);
         } catch (error) {
             console.error('Erreur lors de l\'analyse:', error);
-            alert('Erreur lors de l\'analyse du CV');
+            this.showNotification('Erreur lors de l\'analyse du CV', 'error');
         } finally {
             // Reset button state
             analyzeBtn.disabled = false;
@@ -768,7 +1032,7 @@ class MyCVApp {
         const focusAreas = Array.from(document.querySelectorAll('.improvement-focus:checked')).map(cb => cb.value);
         
         if (!fileInput.files[0]) {
-            alert('Veuillez sélectionner un fichier CV');
+            this.showNotification('Veuillez sélectionner un fichier CV', 'warning');
             return;
         }
 
@@ -786,7 +1050,7 @@ class MyCVApp {
             this.displayImprovementResults(improvements);
         } catch (error) {
             console.error('Erreur lors de l\'amélioration:', error);
-            alert('Erreur lors de l\'amélioration du CV');
+            this.showNotification('Erreur lors de l\'amélioration du CV', 'error');
         } finally {
             // Reset button state
             improveBtn.disabled = false;
